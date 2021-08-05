@@ -1,0 +1,20 @@
+{
+  "conceptId": "",
+  "conceptName": "",
+  "plateId": "",
+  "Summary": "",
+  "updateDate": 1623308202,
+  "stocks": [
+    {
+      "stockCode": "",
+      "stockName": "",
+      "flowCap": "流通市值(亿)",
+      "cap": "总市值(亿)",
+      "netProfit": "净利润",
+      "price": "13.74",
+      "change": "10.00",
+      "PE": "-5.614",
+      "description": "个股概念描述"
+    }
+  ]
+}
