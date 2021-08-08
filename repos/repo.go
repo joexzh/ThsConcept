@@ -16,7 +16,7 @@ type Repo struct {
 }
 
 func NewRepo(ctx context.Context) (*Repo, error) {
-	client, err := db.NewMongoClient(ctx, config.ConnStr)
+	client, err := db.NewMongoClient(ctx, config.GetEnv().MongoConnStr)
 	if err != nil {
 		return nil, err
 	}

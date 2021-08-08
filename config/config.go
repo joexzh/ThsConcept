@@ -1,9 +1,14 @@
 package config
 
+import (
+	"fmt"
+	"os"
+	"sync"
+)
+
 const (
-	ConnStr     = `mongodb://root:199013fankaistar@192.168.23.150:27017`
-	Db          = "ThsConcept"
-	CollConcept = "concepts"
+	Db               = "ThsConcept"
+	CollConcept      = "concepts"
 	CollStockConcept = "stockConcepts"
 
 	UserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.77 Safari/537.36"
@@ -30,3 +35,30 @@ const (
 	SleepRandUpTo = 500
 )
 
+var env *Env
+var once sync.Once
+
+type Env struct {
+	MongoUser     string
+	MongoPassword string
+	MongoHostPort string
+	MongoConnStr  string
+}
+
+func GetEnv() *Env {
+	once.Do(func() {
+		var (
+			user     = os.Getenv("MONGO_USER")
+			password = os.Getenv("MONGO_PASSWORD")
+			hostPort = os.Getenv("MONGO_HOST_PORT")
+		)
+		env = &Env{
+			MongoUser:     user,
+			MongoPassword: password,
+			MongoHostPort: hostPort,
+			MongoConnStr:  fmt.Sprintf(`mongodb://%v:%v@%v`, user, password, hostPort),
+		}
+	})
+
+	return env
+}
