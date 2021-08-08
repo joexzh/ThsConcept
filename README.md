@@ -8,6 +8,7 @@
 export MONGO_USER=example
 export MONGO_PASSWORD=example
 export MONGO_HOST_PORT=192.168.0.1:27017
+export SERVER_PORT=8080
 # 从同花顺 q.10jqka.com.cn 获取概念 
 ThsConcept -mode retrieve
 # 或开启概念查询服务器

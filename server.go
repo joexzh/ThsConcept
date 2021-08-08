@@ -1,8 +1,10 @@
 package main
 
 import (
+	"fmt"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"github.com/joexzh/ThsConcept/config"
 	"log"
 	"path/filepath"
 )
@@ -19,5 +21,9 @@ func startServer() {
 	r.GET("/sc", ginQuerySc)
 	r.GET("/page/sc", ginPageSc)
 
-	log.Fatal(r.Run(":8088"))
+	port := config.GetEnv().ServerPort
+	if port == "" {
+		port = "8080"
+	}
+	log.Fatal(r.Run(fmt.Sprintf(":%v", port)))
 }

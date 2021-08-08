@@ -43,20 +43,23 @@ type Env struct {
 	MongoPassword string
 	MongoHostPort string
 	MongoConnStr  string
+	ServerPort    string
 }
 
 func GetEnv() *Env {
 	once.Do(func() {
 		var (
-			user     = os.Getenv("MONGO_USER")
-			password = os.Getenv("MONGO_PASSWORD")
-			hostPort = os.Getenv("MONGO_HOST_PORT")
+			user       = os.Getenv("MONGO_USER")
+			password   = os.Getenv("MONGO_PASSWORD")
+			hostPort   = os.Getenv("MONGO_HOST_PORT")
+			serverPort = os.Getenv("SERVER_PORT")
 		)
 		env = &Env{
 			MongoUser:     user,
 			MongoPassword: password,
 			MongoHostPort: hostPort,
 			MongoConnStr:  fmt.Sprintf(`mongodb://%v:%v@%v`, user, password, hostPort),
+			ServerPort:    serverPort,
 		}
 	})
 
