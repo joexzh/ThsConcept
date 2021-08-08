@@ -5,6 +5,7 @@ RUN apk update && \
     apk add gcc libc-dev linux-headers
 WORKDIR /app \
 COPY . .
+RUN ls .
 RUN go build && go install
 
 FROM alpine3.14
