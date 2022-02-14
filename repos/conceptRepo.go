@@ -93,23 +93,6 @@ func (r *ConceptRepo) Update(ctx context.Context, concepts ...model.Concept) (in
 	return updated, nil
 }
 
-//func (r *ConceptRepo) Replace(concepts ...model.Concept) (int64, error) {
-//	conceptColl := r.Client.Database(config.Db).Collection(config.CollConcept)
-//	opts := options.Replace().SetUpsert(true)
-//
-//	var matched int64
-//
-//	for _, concept := range concepts {
-//		ret, err := conceptColl.ReplaceOne(context.Background(), bson.M{"conceptId": concept.ConceptId}, concept, opts)
-//		if err != nil {
-//			return 0, err
-//		}
-//		matched += ret.MatchedCount
-//	}
-//
-//	return matched, nil
-//}
-
 func (r *ConceptRepo) DeleteUnMatch(ctx context.Context, concepts ...model.Concept) (int64, error) {
 	conceptsColl := r.Client.Database(config.Db).Collection(config.CollConcept)
 

@@ -2,17 +2,17 @@ package main
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
-	"github.com/joexzh/ThsConcept/config"
-	"github.com/joexzh/ThsConcept/model"
 	"io"
 	"regexp"
 	"strings"
+
+	"github.com/joexzh/ThsConcept/config"
+	"github.com/joexzh/ThsConcept/model"
 )
 
 func allStockSymbol() ([]string, error) {
-	res, err := HttpGet(config.StockSymbolUrl, nil)
+	res, err := HttpGet(config.StockSymbolUrl, nil, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -22,7 +22,7 @@ func allStockSymbol() ([]string, error) {
 	reg := regexp.MustCompile(config.RexStockSymbol)
 	matches := reg.FindAllStringSubmatch(string(data), -1)
 	if len(matches) < 1 {
-		err = errors.New(fmt.Sprintf("表达式`%v`无法匹配`%v`中的内容", config.RexStockSymbol, config.StockSymbolUrl))
+		err = fmt.Errorf("表达式`%v`无法匹配`%v`中的内容", config.RexStockSymbol, config.StockSymbolUrl)
 		return nil, err
 	}
 	slice := make([]string, 0, len(matches))
@@ -56,7 +56,7 @@ func isValidSymbol(symbol string) bool {
 
 func getCidsInOnePage(symbol string) ([]string, error) {
 	url := fmt.Sprintf(config.ConceptPageUrl, symbol)
-	res, err := HttpGet(url, nil)
+	res, err := HttpGet(url, nil, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -68,7 +68,7 @@ func getCidsInOnePage(symbol string) ([]string, error) {
 
 	re := regexp.MustCompile(config.RexValidConceptPage)
 	if !re.Match(page) {
-		return nil, errors.New(fmt.Sprintf("Regex %v didn't match the page %v", config.RexValidConceptPage, url))
+		return nil, fmt.Errorf("regex %v didn't match the page %v", config.RexValidConceptPage, url)
 	}
 
 	re = regexp.MustCompile(config.RexConceptId)
@@ -80,8 +80,8 @@ func getCidsInOnePage(symbol string) ([]string, error) {
 	return cids, nil
 }
 
-func getConceptCodesFromPage() ([]string, error) {
-	res, err := HttpGet(config.ConceptAllUrl, nil)
+func ConceptCodesFromPage() ([]string, error) {
+	res, err := HttpGet(config.ConceptAllUrl, nil, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -102,9 +102,9 @@ func getConceptCodesFromPage() ([]string, error) {
 	return cids, nil
 }
 
-func getConceptFromApi(conceptId string) (*model.Return, error) {
+func ConceptFromApi(conceptId string) (*model.Return, error) {
 	url := fmt.Sprintf(config.ConceptApiUrl, conceptId)
-	res, err := HttpGet(url, nil)
+	res, err := HttpGet(url, nil, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -123,9 +123,9 @@ func getConceptFromApi(conceptId string) (*model.Return, error) {
 	return &ret, nil
 }
 
-func getConceptDefineFromPage(conceptId string) (string, error) {
+func ConceptDefineFromPage(conceptId string) (string, error) {
 	url := fmt.Sprintf(config.ConceptDetailPageUrl, conceptId)
-	res, err := HttpGet(url, nil)
+	res, err := HttpGet(url, nil, nil)
 	if err != nil {
 		return "", err
 	}

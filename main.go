@@ -17,13 +17,10 @@ func main() {
 	switch mode {
 	case "server":
 		startServer()
-		break
 	case "retrieve":
 		retrieveData()
-		break
 	case "test":
 		test()
-		break
 	default:
 		log.Fatal("wrong mode")
 	}

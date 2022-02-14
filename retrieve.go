@@ -3,21 +3,22 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/joexzh/ThsConcept/config"
-	"github.com/joexzh/ThsConcept/model"
-	"github.com/joexzh/ThsConcept/repos"
 	"log"
 	"math/rand"
 	"time"
+
+	"github.com/joexzh/ThsConcept/config"
+	"github.com/joexzh/ThsConcept/model"
+	"github.com/joexzh/ThsConcept/repos"
 )
 
 func retrieveData() {
 	fmt.Println("Starting to retrieve data")
 	throttleChan := make(chan struct{}, config.Throttle) // throttle goroutine, prevent system or network crash
-	rand.Seed(time.Now().UnixNano())              // 用于每个goroutine随机睡眠
+	rand.Seed(time.Now().UnixNano())                     // 用于每个goroutine随机睡眠
 
 	// get concept ids from page
-	cids, err := getConceptCodesFromPage()
+	cids, err := ConceptCodesFromPage()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -35,7 +36,6 @@ func retrieveData() {
 					switch err := r.(type) {
 					case error:
 						fmt.Printf(errStr, cid, err.Error())
-						break
 					default:
 						fmt.Printf(errStr, cid, err)
 					}
@@ -47,11 +47,11 @@ func retrieveData() {
 				<-throttleChan
 			}()
 
-			ret, err := getConceptFromApi(cid)
+			ret, err := ConceptFromApi(cid)
 			if err != nil {
 				panic(err)
 			}
-			define, err := getConceptDefineFromPage(cid)
+			define, err := ConceptDefineFromPage(cid)
 			if err != nil {
 				panic(err)
 			}
