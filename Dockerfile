@@ -1,10 +1,9 @@
 FROM golang:1.17.7-alpine3.15 as builder
-ENV GO111MODULE=on
-RUN apk update && \
-    apk upgrade && \
-    apk add gcc libc-dev linux-headers
+RUN apk update && apk upgrade
 WORKDIR /app
 COPY . .
+ENV GO111MODULE=on
+ENV GOPROXY="https://goproxy.io"
 RUN go install
 
 FROM alpine:3.15
