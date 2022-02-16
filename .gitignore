@@ -134,3 +134,5 @@ fabric.properties
 .idea
 .env
 run.bat
+test
+test.go
