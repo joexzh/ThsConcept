@@ -2,8 +2,7 @@ FROM golang:1.17.7-alpine3.15 as builder
 RUN apk update && apk upgrade
 WORKDIR /app
 COPY . .
-ENV GO111MODULE=on
-ENV GOPROXY="https://goproxy.io"
+ENV GO111MODULE=on GOPROXY="https://goproxy.io"
 RUN go install
 
 FROM alpine:3.15
