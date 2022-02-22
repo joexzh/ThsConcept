@@ -75,7 +75,7 @@ func ginQuerySc(c *gin.Context) {
 	stockName := c.Query("stockname")
 	conceptNameRegex := c.Query("concept")
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10 * time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	dtos, err := scDtos(ctx, conceptNameRegex, stockName, int(limit))
 	if err != nil {
@@ -91,7 +91,7 @@ func ginPageSc(c *gin.Context) {
 	stockName := c.Query("stockname")
 	conceptRegex := c.Query("concept")
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10 * time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	dtos, err := scDtos(ctx, conceptRegex, stockName, int(limit))
 	scPageDto := view.ScPageDto{
