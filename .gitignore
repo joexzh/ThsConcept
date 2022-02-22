@@ -135,4 +135,3 @@ fabric.properties
 .env
 run.bat
 test
-test.go
