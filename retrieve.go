@@ -3,17 +3,24 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/joexzh/ThsConcept/config"
+	"github.com/joexzh/ThsConcept/fetch"
 	"log"
 	"math/rand"
 	"time"
 
-	"github.com/joexzh/ThsConcept/config"
 	"github.com/joexzh/ThsConcept/model"
 	"github.com/joexzh/ThsConcept/repos"
 )
 
 func retrieveData() {
 	fmt.Println("Starting to retrieve data")
+
+	retrieveConcept() // 从同花顺获取概念
+	retrieveSohuZdt() // 从搜狐网获取涨跌停数据
+}
+
+func retrieveConcept() {
 	throttleChan := make(chan struct{}, config.Throttle) // throttle goroutine, prevent system or network crash
 	rand.Seed(time.Now().UnixNano())                     // 用于每个goroutine随机睡眠
 
@@ -96,4 +103,42 @@ func retrieveData() {
 		log.Fatal(err)
 	}
 	fmt.Printf("UpdateStockConcept: deleted %v, updated %v\n", deleted, updated)
+}
+
+func retrieveSohuZdt() {
+	list, err := fetch.SohuZDT()
+	if err != nil {
+		log.Fatal(err)
+	}
+	if len(list) < 1 {
+		return
+	}
+
+	repo, err := repos.NewStockMarketRepo()
+	if err != nil {
+		log.Fatal(err)
+	}
+	date := time.Now().AddDate(0, -3, 0)
+	dbList, err := repo.QueryLongShort(context.Background(), date, repos.DateDesc, 1)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var newList []model.ZDTHistory
+	if len(dbList) > 0 {
+		lastDate := dbList[0].Date
+		for _, zdt := range list {
+			if zdt.Date.After(lastDate) {
+				newList = append(newList, zdt)
+			}
+		}
+	} else {
+		newList = list
+	}
+
+	rows, err := repo.InsertLongShort(context.Background(), newList)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("mysql: inserted %v rows to stock_market/long_short", rows)
 }

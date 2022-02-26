@@ -14,7 +14,7 @@ import (
 )
 
 type RealtimeRepo struct {
-	*Repo
+	*MongodbRepo
 	collRealtime *mongo.Collection
 	collConcept  *mongo.Collection
 }
@@ -25,7 +25,7 @@ func NewRealtimeRepo(ctx context.Context) (*RealtimeRepo, error) {
 		return nil, err
 	}
 	repo := RealtimeRepo{
-		Repo:         r,
+		MongodbRepo:  r,
 		collRealtime: r.Client.Database(config.Db).Collection(config.CollRealtime),
 		collConcept:  r.Client.Database(config.Db).Collection(config.CollConcept),
 	}

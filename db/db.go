@@ -4,6 +4,8 @@ import (
 	"context"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+
+	_ "github.com/go-sql-driver/mysql"
 )
 
 func NewMongoClient(ctx context.Context, connStr string) (*mongo.Client, error) {
@@ -15,4 +17,3 @@ func NewMongoClient(ctx context.Context, connStr string) (*mongo.Client, error) 
 	}
 	return client, nil
 }
-

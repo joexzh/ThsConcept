@@ -38,32 +38,40 @@ const (
 	SleepRandUpTo = 500
 )
 
-var env *Env
-var once sync.Once
-
 type Env struct {
 	MongoUser     string
 	MongoPassword string
 	MongoHostPort string
 	MongoConnStr  string
-	ServerPort    string
+
+	ServerPort string
+
+	MysqlUser     string
+	MysqlPassword string
+	MysqlHost     string
+	MysqlPort     string
+	MysqlConnStr  string
 }
 
-func GetEnv() *Env {
+var env = Env{
+	MongoUser:     os.Getenv("MONGO_USER"),
+	MongoPassword: os.Getenv("MONGO_PASSWORD"),
+	MongoHostPort: os.Getenv("MONGO_HOST_PORT"),
+
+	ServerPort: os.Getenv("SERVER_PORT"),
+
+	MysqlUser:     os.Getenv("mysql_user"),
+	MysqlPassword: os.Getenv("mysql_password"),
+	MysqlHost:     os.Getenv("mysql_host"),
+	MysqlPort:     os.Getenv("mysql_port"),
+}
+
+var once sync.Once
+
+func GetEnv() Env {
 	once.Do(func() {
-		var (
-			user       = os.Getenv("MONGO_USER")
-			password   = os.Getenv("MONGO_PASSWORD")
-			hostPort   = os.Getenv("MONGO_HOST_PORT")
-			serverPort = os.Getenv("SERVER_PORT")
-		)
-		env = &Env{
-			MongoUser:     user,
-			MongoPassword: password,
-			MongoHostPort: hostPort,
-			MongoConnStr:  fmt.Sprintf(`mongodb://%v:%v@%v`, user, password, hostPort),
-			ServerPort:    serverPort,
-		}
+		env.MongoConnStr = fmt.Sprintf(`mongodb://%s:%s@%s`, env.MongoUser, env.MongoPassword, env.MongoHostPort)
+		env.MysqlConnStr = fmt.Sprintf("%s:%s@tcp(%s:%s)/stock_market?parseTime=true&loc=Asia%%2FShanghai", env.MysqlUser, env.MysqlPassword, env.MysqlHost, env.MysqlPort)
 	})
 
 	return env

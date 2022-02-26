@@ -11,19 +11,19 @@ type DisConnectable interface {
 	CloseConnection(ctx context.Context) error
 }
 
-type Repo struct {
+type MongodbRepo struct {
 	Client *mongo.Client
 }
 
-func NewRepo(ctx context.Context) (*Repo, error) {
+func NewRepo(ctx context.Context) (*MongodbRepo, error) {
 	client, err := db.NewMongoClient(ctx, config.GetEnv().MongoConnStr)
 	if err != nil {
 		return nil, err
 	}
-	return &Repo{Client: client}, nil
+	return &MongodbRepo{Client: client}, nil
 }
 
-func (r *Repo) CloseConnection(ctx context.Context) error {
+func (r *MongodbRepo) CloseConnection(ctx context.Context) error {
 	if r.Client == nil {
 		return nil
 	}

@@ -11,7 +11,7 @@ import (
 )
 
 type ConceptRepo struct {
-	*Repo
+	*MongodbRepo
 }
 
 func NewConceptRepo(ctx context.Context) (*ConceptRepo, error) {
