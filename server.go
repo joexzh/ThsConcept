@@ -23,13 +23,15 @@ func startServer() {
 	r.GET("/query/:name", ginQuery)
 	r.GET("/queryrex/:name", ginQueryRex)
 	r.GET("/concept/:conceptId", ginConceptId)
-	r.GET("/sc", ginQuerySc)
+	r.GET("/api/stockconcept", ginQuerySc)
 	r.GET("/page/sc", ginPageSc)
 
 	r.GET("/api/realtime", ginRealtimeApi)
-	r.GET("/list/:userId", ginRealtimeGetSavedMsgList)
-	r.POST("/list/:userId", ginRealtimeSaveMsg)
-	r.DELETE("/list/:userId", ginRealtimeDelMsg)
+	r.GET("/api/realtime/save/:userId", ginRealtimeGetSavedMsgList)
+	r.POST("/api/realtime/save/:userId", ginRealtimeSaveMsg)
+	r.DELETE("/api/realtime/save/:userId", ginRealtimeDelMsg)
+
+	r.GET("/api/stock/zdt", ginLongShort)
 
 	port := config.GetEnv().ServerPort
 	if port == "" {

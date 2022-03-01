@@ -72,7 +72,7 @@ func ginConceptId(c *gin.Context) {
 
 func ginQuerySc(c *gin.Context) {
 	limit, _ := strconv.ParseInt(c.Query("limit"), 10, 32)
-	stockName := c.Query("stockname")
+	stockName := c.Query("stock")
 	conceptNameRegex := c.Query("concept")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
