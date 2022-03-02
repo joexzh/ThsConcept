@@ -30,17 +30,14 @@ func SohuZDT() ([]model.ZDTHistory, error) {
 
 	now := time.Now()
 	var errList []error
-	trs := doc.Find(".data-main .data-table table tbody tr")
-	length := trs.Length() - 2
+
+	// 跳过表头, 占2个tr
+	trs := doc.Find(".data-main .data-table table tbody tr").Slice(2, goquery.ToEnd)
+	length := trs.Length()
 	list := make([]model.ZDTHistory, length, length)
 	trs.Each(func(tri int, selection *goquery.Selection) {
-		tri = tri - 2 // 跳过表头, 占2个tr
-		if tri < 0 {
-			return
-		}
-
-		selection.Find("td").Each(func(tdi int, selection *goquery.Selection) {
-			err = TDData(tdi, selection, &list[tri], now)
+		selection.Find("td").Each(func(tdi int, td *goquery.Selection) {
+			err = parseTd(tdi, td, &list[tri], now)
 			if err != nil {
 				errList = append(errList, errors.Wrap(err, errPrefix))
 			}
@@ -55,9 +52,9 @@ func SohuZDT() ([]model.ZDTHistory, error) {
 
 }
 
-// TDData <td>xxx</td> content to ZDTHistory
-func TDData(i int, selection *goquery.Selection, zdt *model.ZDTHistory, now time.Time) error {
-	text := selection.Text()
+// parseTd parse <td>xxx</td> content to ZDTHistory
+func parseTd(i int, td *goquery.Selection, zdt *model.ZDTHistory, now time.Time) error {
+	text := td.Text()
 	text = strings.Trim(text, " \n\r")
 
 	switch i {
