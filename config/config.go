@@ -71,7 +71,7 @@ var once sync.Once
 func GetEnv() Env {
 	once.Do(func() {
 		env.MongoConnStr = fmt.Sprintf(`mongodb://%s:%s@%s`, env.MongoUser, env.MongoPassword, env.MongoHostPort)
-		env.MysqlConnStr = fmt.Sprintf("%s:%s@tcp(%s:%s)/stock_market?parseTime=true&loc=Asia%%2FShanghai", env.MysqlUser, env.MysqlPassword, env.MysqlHost, env.MysqlPort)
+		env.MysqlConnStr = fmt.Sprintf("%s:%s@tcp(%s:%s)/stock_market?parseTime=true", env.MysqlUser, env.MysqlPassword, env.MysqlHost, env.MysqlPort)
 	})
 
 	return env
