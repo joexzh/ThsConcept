@@ -3,7 +3,6 @@ package repos
 import (
 	"context"
 	"errors"
-	"fmt"
 	"github.com/joexzh/ThsConcept/config"
 	"github.com/joexzh/ThsConcept/model"
 	"github.com/joexzh/ThsConcept/realtime"
@@ -32,12 +31,7 @@ func NewRealtimeRepo(ctx context.Context) (*RealtimeRepo, error) {
 	return &repo, nil
 }
 
-func (r *RealtimeRepo) Query(ctx context.Context, queryStr string, opts ...*options.FindOptions) ([]realtime.SavedMessage, error) {
-	var queryDoc bson.D
-	err := bson.UnmarshalExtJSON([]byte(queryStr), false, &queryDoc)
-	if err != nil {
-		return nil, err
-	}
+func (r *RealtimeRepo) Query(ctx context.Context, queryDoc *bson.D, opts ...*options.FindOptions) ([]realtime.SavedMessage, error) {
 	cursor, err := r.collRealtime.Find(ctx, queryDoc, opts...)
 	if err != nil {
 		return nil, err
@@ -50,9 +44,11 @@ func (r *RealtimeRepo) Query(ctx context.Context, queryStr string, opts ...*opti
 	return list, nil
 }
 
-func (r *RealtimeRepo) QuerySavedMessageList(ctx context.Context, userId string) ([]realtime.SavedMessage, error) {
-	queryStr := fmt.Sprintf(`{"userId":"%v"}`, userId)
-	return r.Query(ctx, queryStr)
+func (r *RealtimeRepo) QuerySaveMessageDesc(ctx context.Context, userId string) ([]realtime.SavedMessage, error) {
+	queryDoc := bson.D{{"userId", userId}}
+	opt := options.Find().SetSort(bson.D{{"message.ctime", -1}})
+	opt.SetCollation(&options.Collation{Locale: "en_US", NumericOrdering: true})
+	return r.Query(ctx, &queryDoc, opt)
 }
 
 func (r *RealtimeRepo) SaveMessage(ctx context.Context, userId string, message *realtime.Message) error {

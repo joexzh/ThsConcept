@@ -215,7 +215,7 @@ func ginRealtimeGetSavedMsgList(c *gin.Context) {
 		return
 	}
 
-	list, err := repo.QuerySavedMessageList(ctx, userId)
+	list, err := repo.QuerySaveMessageDesc(ctx, userId)
 	if err != nil {
 		c.AbortWithError(http.StatusBadRequest, err)
 		return
