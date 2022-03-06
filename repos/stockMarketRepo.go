@@ -3,7 +3,6 @@ package repos
 import (
 	"context"
 	"database/sql"
-	"github.com/joexzh/ThsConcept/config"
 	"github.com/joexzh/ThsConcept/db"
 	"github.com/joexzh/ThsConcept/model"
 	"github.com/pkg/errors"
@@ -36,7 +35,7 @@ type StockMarketRepo struct {
 }
 
 func NewStockMarketRepo() (*StockMarketRepo, error) {
-	client, err := db.NewMysqlClient(config.GetEnv().MysqlConnStr)
+	client, err := db.GetMysqlClient()
 	if err != nil {
 		return nil, errors.Wrap(err, db.Mysql)
 	}

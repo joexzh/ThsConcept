@@ -17,12 +17,11 @@ func ginQuery(c *gin.Context) {
 	conceptName := c.Param("name")
 
 	ctx := context.Background()
-	repo, err := repos.NewConceptRepo(ctx)
+	repo, err := repos.NewConceptRepo()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, wrapResult(errCode(err), err.Error(), nil))
 		return
 	}
-	defer repo.CloseConnection(ctx)
 
 	concept, err := repo.QueryByConceptNameRex(ctx, conceptName)
 	if err != nil {
@@ -36,12 +35,11 @@ func ginQueryRex(c *gin.Context) {
 	conceptName := c.Param("name")
 
 	ctx := context.Background()
-	repo, err := repos.NewConceptRepo(ctx)
+	repo, err := repos.NewConceptRepo()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, wrapResult(errCode(err), err.Error(), nil))
 		return
 	}
-	defer repo.CloseConnection(ctx)
 
 	concept, err := repo.QueryByConceptNameRex(ctx, conceptName)
 	if err != nil {
@@ -55,12 +53,11 @@ func ginConceptId(c *gin.Context) {
 	conceptId := c.Param("conceptId")
 
 	ctx := context.Background()
-	repo, err := repos.NewConceptRepo(ctx)
+	repo, err := repos.NewConceptRepo()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, wrapResult(errCode(err), err.Error(), nil))
 		return
 	}
-	defer repo.CloseConnection(ctx)
 
 	concept, err := repo.QueryByConceptId(ctx, conceptId)
 	if err != nil {
@@ -108,11 +105,10 @@ func ginPageSc(c *gin.Context) {
 }
 
 func scDtos(ctx context.Context, concept string, stockName string, limit int) ([]view.StockConceptDto, error) {
-	repo, err := repos.NewConceptRepo(ctx)
+	repo, err := repos.NewConceptRepo()
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to NewConceptRepo")
 	}
-	defer repo.CloseConnection(ctx)
 
 	scs, err := repo.QueryScDesc(ctx, stockName, concept, limit)
 	if err != nil {

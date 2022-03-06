@@ -64,13 +64,12 @@ var conceptShortsMapOnce = ConceptShortsMapOnce{
 func getConceptShortsMap() map[string][]string {
 	conceptShortsMapOnce.Once.Do(func() {
 		ctx := context.Background()
-		repo, err := repos.NewRealtimeRepo(ctx)
+		repo, err := repos.NewRealtimeRepo()
 		if err != nil {
 			log.Println(err)
 			conceptShortsMapOnce.Once = new(sync.Once)
 			return
 		}
-		defer repo.CloseConnection(ctx)
 
 		conceptNames, err := repo.GetAllConceptNames(ctx)
 		if err != nil {
@@ -169,13 +168,12 @@ func ginRealtimeSaveMsg(c *gin.Context) {
 	}
 
 	ctx := context.Background()
-	repo, err := repos.NewRealtimeRepo(ctx)
+	repo, err := repos.NewRealtimeRepo()
 	if err != nil {
 		log.Println(err)
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
-	defer repo.CloseConnection(ctx)
 
 	if err = repo.SaveMessage(ctx, userId, &msg); err != nil {
 		log.Println(err)
@@ -190,12 +188,11 @@ func ginRealtimeDelMsg(c *gin.Context) {
 	objId := c.Query("objId")
 
 	ctx := context.Background()
-	repo, err := repos.NewRealtimeRepo(ctx)
+	repo, err := repos.NewRealtimeRepo()
 	if err != nil {
 		c.AbortWithError(http.StatusInternalServerError, err)
 		return
 	}
-	defer repo.CloseConnection(ctx)
 
 	if err = repo.DelSaveMessage(ctx, userId, objId); err != nil {
 		c.AbortWithError(http.StatusBadRequest, err)
@@ -209,7 +206,7 @@ func ginRealtimeGetSavedMsgList(c *gin.Context) {
 	userId := c.Param("userId")
 
 	ctx := context.Background()
-	repo, err := repos.NewRealtimeRepo(ctx)
+	repo, err := repos.NewRealtimeRepo()
 	if err != nil {
 		c.AbortWithError(http.StatusBadRequest, err)
 		return

@@ -14,8 +14,8 @@ type ConceptRepo struct {
 	*MongodbRepo
 }
 
-func NewConceptRepo(ctx context.Context) (*ConceptRepo, error) {
-	r, err := NewRepo(ctx)
+func NewConceptRepo() (*ConceptRepo, error) {
+	r, err := NewMongoDbRepo()
 	if err != nil {
 		return nil, err
 	}

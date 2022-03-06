@@ -18,8 +18,8 @@ type RealtimeRepo struct {
 	collConcept  *mongo.Collection
 }
 
-func NewRealtimeRepo(ctx context.Context) (*RealtimeRepo, error) {
-	r, err := NewRepo(ctx)
+func NewRealtimeRepo() (*RealtimeRepo, error) {
+	r, err := NewMongoDbRepo()
 	if err != nil {
 		return nil, err
 	}

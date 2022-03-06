@@ -85,11 +85,10 @@ func retrieveConcept() {
 	}
 
 	ctx := context.Background()
-	repo, err := repos.NewConceptRepo(ctx)
+	repo, err := repos.NewConceptRepo()
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer repo.CloseConnection(ctx)
 
 	deleted, updated, err := repo.UpdateConceptColl(ctx, conceptSlice...)
 	if err != nil {
