@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/joexzh/ThsConcept/config"
 	"time"
@@ -43,7 +44,7 @@ func newMysqlClient(dsn string) (*sql.DB, error) {
 	if err != nil {
 		return nil, err
 	}
-
+	fmt.Println("mysql: ping success")
 	return pool, nil
 }
 
