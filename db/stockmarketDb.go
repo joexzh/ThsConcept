@@ -1,9 +1,7 @@
 package db
 
 import (
-	"context"
 	"database/sql"
-	"fmt"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/joexzh/ThsConcept/config"
 	"time"
@@ -40,20 +38,20 @@ func newMysqlClient(dsn string) (*sql.DB, error) {
 	pool.SetConnMaxIdleTime(10)
 	pool.SetMaxOpenConns(10)
 
-	err = ping(pool)
-	if err != nil {
-		fmt.Println(err)
-		return nil, err
-	}
-	fmt.Println("mysql: ping success")
+	// err = ping(pool)
+	// if err != nil {
+	// 	fmt.Println(err)
+	// 	return nil, err
+	// }
+	// fmt.Println("mysql: ping success")
 	return pool, nil
 }
 
-func ping(pool *sql.DB) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
-	defer cancel()
-	if err := pool.PingContext(ctx); err != nil {
-		return err
-	}
-	return nil
-}
+// func ping(pool *sql.DB) error {
+// 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+// 	defer cancel()
+// 	if err := pool.PingContext(ctx); err != nil {
+// 		return err
+// 	}
+// 	return nil
+// }
