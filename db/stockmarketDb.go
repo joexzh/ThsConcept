@@ -42,6 +42,7 @@ func newMysqlClient(dsn string) (*sql.DB, error) {
 
 	err = ping(pool)
 	if err != nil {
+		fmt.Println(err)
 		return nil, err
 	}
 	fmt.Println("mysql: ping success")
