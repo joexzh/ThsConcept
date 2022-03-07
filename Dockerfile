@@ -2,8 +2,10 @@ FROM golang:1.17.7-alpine3.15 as builder
 RUN apk update && apk upgrade
 WORKDIR /app
 ENV GO111MODULE=on GOPROXY="https://goproxy.io"
+COPY go.mod go.sum ./
+RUN go mod download -x
 COPY . .
-RUN go install
+RUN go install -ldflags '-s -w'
 
 FROM alpine:3.15
 RUN apk add --no-cache iptables
