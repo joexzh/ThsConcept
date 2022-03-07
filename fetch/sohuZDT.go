@@ -1,7 +1,6 @@
 package fetch
 
 import (
-	"github.com/joexzh/ThsConcept/config"
 	"github.com/pkg/errors"
 	"net/http"
 	"strconv"
@@ -76,7 +75,7 @@ func parseTd(i int, td *goquery.Selection, zdt *model.ZDTHistory, now time.Time)
 		if int64(now.Month()) < month {
 			year -= 1
 		}
-		loc, err := time.LoadLocation(config.TimeLocal)
+		loc, err := time.LoadLocation("UTC")
 		if err != nil {
 			return err
 		}
