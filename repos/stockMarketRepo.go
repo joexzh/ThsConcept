@@ -7,7 +7,6 @@ import (
 	"github.com/joexzh/ThsConcept/model"
 	"github.com/pkg/errors"
 	"strings"
-	"sync"
 	"time"
 )
 
@@ -40,23 +39,6 @@ func NewStockMarketRepo() (*StockMarketRepo, error) {
 		return nil, errors.Wrap(err, db.Mysql)
 	}
 	return &StockMarketRepo{client}, nil
-}
-
-var (
-	getRepoOnce = sync.Once{}
-	repo        *StockMarketRepo
-	repoErr     error
-)
-
-func GetStockMarketRepo() (*StockMarketRepo, error) {
-	getRepoOnce.Do(func() {
-		r, err := NewStockMarketRepo()
-		if err != nil {
-			repoErr = err
-		}
-		repo = r
-	})
-	return repo, repoErr
 }
 
 type DateOrder string
