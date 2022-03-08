@@ -7,7 +7,10 @@ import (
 	"time"
 )
 
-const Mysql = "mysql"
+const (
+	Mysql = "mysql"
+	Limit = 10000
+)
 
 type mysqlClient struct {
 	pool *sql.DB

@@ -118,7 +118,7 @@ func retrieveSohuZdt() {
 		log.Fatal(err)
 	}
 	date := time.Now().AddDate(0, -3, 0)
-	dbList, err := repo.QueryLongShort(context.Background(), date, repos.DateDesc, 1)
+	dbList, err := repo.ZdtListDesc(context.Background(), date, 1)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -135,7 +135,7 @@ func retrieveSohuZdt() {
 		newList = list
 	}
 
-	rows, err := repo.InsertLongShort(context.Background(), newList)
+	rows, err := repo.InsertZdtList(context.Background(), newList)
 	if err != nil {
 		log.Fatal(err)
 	}

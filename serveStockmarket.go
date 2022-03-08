@@ -16,7 +16,7 @@ func ginLongShort(c *gin.Context) {
 		c.AbortWithError(http.StatusInternalServerError, err)
 		return
 	}
-	zdts, err := repo.QueryLongShort(context.Background(), time.Now().AddDate(-2, 0, 0), repos.DateAsc, 100)
+	zdts, err := repo.ZdtListDesc(context.Background(), time.Now().AddDate(-2, 0, 0), 0)
 	if err != nil {
 		log.Println(err)
 		c.AbortWithError(http.StatusInternalServerError, err)

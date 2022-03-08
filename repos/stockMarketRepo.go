@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-const queryLongShortSql = `SELECT * FROM long_short WHERE date >= ? `
+const queryLongShortSql = `SELECT * FROM long_short WHERE date >= ? ORDER BY date DESC LIMIT ?`
 const insertLongShortSql = `INSERT INTO long_short VALUES `
 
 func prepareInsertLongShort(list []model.ZDTHistory) (string, []interface{}) {
@@ -41,24 +41,11 @@ func NewStockMarketRepo() (*StockMarketRepo, error) {
 	return &StockMarketRepo{client}, nil
 }
 
-type DateOrder string
-
-const (
-	DateAsc  = DateOrder("")
-	DateDesc = DateOrder("ORDER BY date DESC")
-)
-
-func (repo *StockMarketRepo) QueryLongShort(ctx context.Context, start time.Time, order DateOrder, limit int) ([]model.ZDTHistory, error) {
-	sb := strings.Builder{}
-	sb.WriteString(queryLongShortSql)
-	vars := []interface{}{start}
-	sb.WriteString(string(order))
-	if limit > 0 {
-		sb.WriteString(" LIMIT ?")
-		vars = append(vars, limit)
+func (repo *StockMarketRepo) ZdtListDesc(ctx context.Context, start time.Time, limit int) ([]model.ZDTHistory, error) {
+	if limit < 1 {
+		limit = db.Limit
 	}
-
-	rows, err := repo.QueryContext(ctx, sb.String(), vars...)
+	rows, err := repo.QueryContext(ctx, queryLongShortSql, start, limit)
 	if err != nil {
 		return nil, errors.Wrap(err, db.Mysql)
 	}
@@ -82,7 +69,7 @@ func (repo *StockMarketRepo) QueryLongShort(ctx context.Context, start time.Time
 	return list, nil
 }
 
-func (repo *StockMarketRepo) InsertLongShort(ctx context.Context, list []model.ZDTHistory) (int64, error) {
+func (repo *StockMarketRepo) InsertZdtList(ctx context.Context, list []model.ZDTHistory) (int64, error) {
 	if len(list) < 1 {
 		return 0, nil
 	}
