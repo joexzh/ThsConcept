@@ -5,7 +5,6 @@ import (
 	"errors"
 	"github.com/joexzh/ThsConcept/config"
 	"github.com/joexzh/ThsConcept/model"
-	"github.com/joexzh/ThsConcept/realtime"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -31,28 +30,28 @@ func NewRealtimeRepo() (*RealtimeRepo, error) {
 	return &repo, nil
 }
 
-func (r *RealtimeRepo) Query(ctx context.Context, queryDoc *bson.D, opts ...*options.FindOptions) ([]realtime.SavedMessage, error) {
+func (r *RealtimeRepo) Query(ctx context.Context, queryDoc *bson.D, opts ...*options.FindOptions) ([]model.RealtimeSavedMessage, error) {
 	cursor, err := r.collRealtime.Find(ctx, queryDoc, opts...)
 	if err != nil {
 		return nil, err
 	}
 
-	var list []realtime.SavedMessage
+	var list []model.RealtimeSavedMessage
 	if err = cursor.All(ctx, &list); err != nil {
 		return nil, err
 	}
 	return list, nil
 }
 
-func (r *RealtimeRepo) QuerySaveMessageDesc(ctx context.Context, userId string) ([]realtime.SavedMessage, error) {
+func (r *RealtimeRepo) QuerySaveMessageDesc(ctx context.Context, userId string) ([]model.RealtimeSavedMessage, error) {
 	queryDoc := bson.D{{"userId", userId}}
 	opt := options.Find().SetSort(bson.D{{"message.ctime", -1}})
 	opt.SetCollation(&options.Collation{Locale: "en_US", NumericOrdering: true})
 	return r.Query(ctx, &queryDoc, opt)
 }
 
-func (r *RealtimeRepo) SaveMessage(ctx context.Context, userId string, message *realtime.Message) error {
-	msg := realtime.SavedMessage{
+func (r *RealtimeRepo) SaveMessage(ctx context.Context, userId string, message *model.RealtimeMessage) error {
+	msg := model.RealtimeSavedMessage{
 		UserId:  userId,
 		Message: *message,
 	}

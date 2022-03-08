@@ -4,15 +4,15 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/gin-gonic/gin"
-	"github.com/joexzh/ThsConcept/realtime"
+	"github.com/joexzh/ThsConcept/dto"
+	"github.com/joexzh/ThsConcept/model"
 	"github.com/joexzh/ThsConcept/repos"
+	"github.com/joexzh/ThsConcept/util"
 	"io"
 	"log"
 	"net/http"
 	"strconv"
 	"strings"
-	"sync"
-	"time"
 )
 
 // Hop-by-hop headers. These are removed when sent to the backend.
@@ -52,65 +52,13 @@ func appendHostToXForwardHeader(header http.Header, host string) {
 	header.Set("X-Forwarded-For", host)
 }
 
-type ConceptShortsMapOnce struct {
-	ConceptShortsMap map[string][]string
-	Once             *sync.Once
-}
-
-var conceptShortsMapOnce = ConceptShortsMapOnce{
-	Once: new(sync.Once),
-}
-
-func getConceptShortsMap() map[string][]string {
-	conceptShortsMapOnce.Once.Do(func() {
-		ctx := context.Background()
-		repo, err := repos.NewRealtimeRepo()
-		if err != nil {
-			log.Println(err)
-			conceptShortsMapOnce.Once = new(sync.Once)
-			return
-		}
-
-		conceptNames, err := repo.GetAllConceptNames(ctx)
-		if err != nil {
-			log.Println(err)
-			conceptShortsMapOnce.Once = new(sync.Once)
-			return
-		}
-		conceptShortsMapOnce.ConceptShortsMap = realtime.MergeConceptShortsMap(conceptNames)
-	})
-
-	return conceptShortsMapOnce.ConceptShortsMap
-}
-
-func keywordsCounts(messages []realtime.Message) []realtime.KeywordCount {
-	start := time.Now()
-	defer func() {
-		log.Println("keywordsCounts time: ", time.Since(start))
-	}()
-
-	conceptShortsMap := getConceptShortsMap()
-	totalKeywordCounts := make([]realtime.KeywordCount, 0)
-	if conceptShortsMap == nil {
-		return totalKeywordCounts
-	}
-
-	for _, msg := range messages {
-		kwc := realtime.KeywordCounts(msg.Digest, conceptShortsMap)
-		msg.KeywordCounts = kwc
-		totalKeywordCounts = append(totalKeywordCounts, kwc...)
-	}
-	realtime.SortKeywordCounts(totalKeywordCounts)
-	return totalKeywordCounts
-}
-
 func ginRealtimeApi(c *gin.Context) {
 	page, _ := strconv.ParseInt(c.Query("page"), 10, 32)
 	pagesize, _ := strconv.ParseInt(c.Query("pagesize"), 10, 32)
 	tag := c.Query("tag")
 	ctime, _ := strconv.ParseInt(c.Query("ctime"), 10, 64)
 
-	resp, err := HttpGetRealTime(int(page), int(pagesize), tag, int(ctime))
+	resp, err := util.HttpGetRealTime(int(page), int(pagesize), tag, int(ctime))
 	if err != nil {
 		log.Println(err.Error())
 		c.String(http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError))
@@ -119,19 +67,17 @@ func ginRealtimeApi(c *gin.Context) {
 	defer resp.Body.Close()
 
 	decoder := json.NewDecoder(resp.Body)
-	var apiResp = realtime.Response{}
+	var apiResp = dto.RealtimeResponse{}
 	if err = decoder.Decode(&apiResp); err != nil {
 		log.Println(err.Error())
 		c.AbortWithError(http.StatusInternalServerError, err)
 		return
 	}
 
-	// kwc := keywordsCounts(apiResp.Data.List)
-	dto := realtime.Dto{
+	dto := dto.RealtimeDto{
 		List:   apiResp.Data.List,
 		Filter: apiResp.Data.Filter,
 		Total:  apiResp.Data.Total,
-		// KeywordCounts: kwc,
 	}
 
 	c.JSON(http.StatusOK, &dto)
@@ -143,7 +89,7 @@ func ginRealtimeApiRaw(c *gin.Context) {
 	tag := c.Query("tag")
 	ctime, _ := strconv.ParseInt(c.Query("ctime"), 10, 64)
 
-	resp, err := HttpGetRealTime(int(page), int(pagesize), tag, int(ctime))
+	resp, err := util.HttpGetRealTime(int(page), int(pagesize), tag, int(ctime))
 	if err != nil {
 		log.Println(err.Error())
 		c.String(http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError))
@@ -160,7 +106,7 @@ func ginRealtimeApiRaw(c *gin.Context) {
 // save message list
 func ginRealtimeSaveMsg(c *gin.Context) {
 	userId := c.Param("userId")
-	var msg realtime.Message
+	var msg model.RealtimeMessage
 	if err := c.BindJSON(&msg); err != nil {
 		log.Println(err)
 		c.AbortWithError(http.StatusBadRequest, err)

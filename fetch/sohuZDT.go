@@ -13,8 +13,7 @@ import (
 
 const errPrefix = "sohu api"
 
-// SohuZDT 获取搜狐的涨跌停历史数据
-// url: https://q.stock.sohu.com/cn/zdt.shtml
+// SohuZDT 从 html 页面 https://q.stock.sohu.com/cn/zdt.shtml 获取搜狐的涨跌停历史数据
 func SohuZDT() ([]model.ZDTHistory, error) {
 	resp, err := http.Get("https://q.stock.sohu.com/cn/zdt.shtml")
 	if err != nil {

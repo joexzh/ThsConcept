@@ -3,9 +3,9 @@ package main
 import (
 	"context"
 	"github.com/gin-gonic/gin"
+	"github.com/joexzh/ThsConcept/dto"
 	"github.com/joexzh/ThsConcept/joexzherror"
 	"github.com/joexzh/ThsConcept/repos"
-	"github.com/joexzh/ThsConcept/view"
 	"github.com/pkg/errors"
 	"log"
 	"net/http"
@@ -91,7 +91,7 @@ func ginPageSc(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	dtos, err := scDtos(ctx, conceptRegex, stockName, int(limit))
-	scPageDto := view.ScPageDto{
+	scPageDto := dto.ScPageDto{
 		Concept:   conceptRegex,
 		StockName: stockName,
 		Scs:       dtos,
@@ -104,7 +104,7 @@ func ginPageSc(c *gin.Context) {
 	c.HTML(http.StatusOK, "index.tmpl", scPageDto)
 }
 
-func scDtos(ctx context.Context, concept string, stockName string, limit int) ([]view.StockConceptDto, error) {
+func scDtos(ctx context.Context, concept string, stockName string, limit int) ([]dto.StockConceptDto, error) {
 	repo, err := repos.NewConceptRepo()
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to NewConceptRepo")
@@ -115,7 +115,7 @@ func scDtos(ctx context.Context, concept string, stockName string, limit int) ([
 		return nil, errors.Wrap(err, "failed to QueryScDesc")
 	}
 
-	dtos := view.ScToScDto(scs...)
+	dtos := dto.ScToScDto(scs...)
 	return dtos, nil
 }
 

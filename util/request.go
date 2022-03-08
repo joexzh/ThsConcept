@@ -1,11 +1,10 @@
-package main
+package util
 
 import (
+	"github.com/joexzh/ThsConcept/config"
 	"net/http"
 	"net/url"
 	"strconv"
-
-	"github.com/joexzh/ThsConcept/config"
 )
 
 // HttpGet Default header User-Agent will be auto set.
