@@ -2,11 +2,11 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"github.com/joexzh/ThsConcept/config"
 	"github.com/joexzh/ThsConcept/fetch"
 	"log"
 	"math/rand"
+	"sync"
 	"time"
 
 	"github.com/joexzh/ThsConcept/model"
@@ -14,10 +14,22 @@ import (
 )
 
 func retrieveData() {
-	fmt.Println("Starting to retrieve data")
+	var wg sync.WaitGroup
+	log.Println("Starting to retrieve data")
 
-	retrieveConcept() // 从同花顺获取概念
-	retrieveSohuZdt() // 从搜狐网获取涨跌停数据
+	wg.Add(1)
+	go func(wg *sync.WaitGroup) {
+		retrieveConcept() // 从同花顺获取概念
+		wg.Done()
+	}(&wg)
+
+	wg.Add(1)
+	go func(wg *sync.WaitGroup) {
+		retrieveSohuZdt() // 从搜狐网获取涨跌停数据
+		wg.Done()
+	}(&wg)
+
+	wg.Wait()
 }
 
 func retrieveConcept() {
@@ -29,7 +41,7 @@ func retrieveConcept() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println("Match concept codes: ", cids)
+	log.Println("Match concept codes: ", cids)
 
 	// get concepts from api
 	conceptChan := make(chan *model.Concept)
@@ -42,9 +54,9 @@ func retrieveConcept() {
 				if r := recover(); r != nil {
 					switch err := r.(type) {
 					case error:
-						fmt.Printf(errStr, cid, err.Error())
+						log.Printf(errStr, cid, err.Error())
 					default:
-						fmt.Printf(errStr, cid, err)
+						log.Printf(errStr, cid, err)
 					}
 
 					conceptChan <- nil
@@ -62,7 +74,7 @@ func retrieveConcept() {
 			if err != nil {
 				panic(err)
 			}
-			fmt.Printf("从api获取了concept: %v\n", ret.Result.Name)
+			log.Printf("从api获取了concept: %v\n", ret.Result.Name)
 			ret.Result.Define = define
 			concept, err := ret.ConvertToConcept()
 			if err != nil {
@@ -80,7 +92,7 @@ func retrieveConcept() {
 	}
 
 	if len(conceptSlice) < 1 {
-		fmt.Println("获得的概念列表为空, 请检查网络或控制goroutine的并发数量")
+		log.Println("获得的概念列表为空, 请检查网络或控制goroutine的并发数量")
 		return
 	}
 
@@ -95,13 +107,13 @@ func retrieveConcept() {
 		log.Default()
 		log.Fatal(err)
 	}
-	fmt.Printf("UpdateConceptColl: deleted %v, updated %v\n", deleted, updated)
+	log.Printf("UpdateConceptColl: deleted %v, updated %v\n", deleted, updated)
 
 	deleted, updated, err = repo.UpdateStockConcept(ctx, conceptSlice...)
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Printf("UpdateStockConcept: deleted %v, updated %v\n", deleted, updated)
+	log.Printf("UpdateStockConcept: deleted %v, updated %v\n", deleted, updated)
 }
 
 func retrieveSohuZdt() {
@@ -139,5 +151,5 @@ func retrieveSohuZdt() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Printf("mysql: inserted %v rows to stock_market/long_short", rows)
+	log.Printf("mysql: inserted %v rows to stock_market/long_short", rows)
 }
