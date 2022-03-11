@@ -7,6 +7,7 @@ require (
 	github.com/gin-contrib/cors v1.3.1
 	github.com/gin-gonic/gin v1.7.7
 	github.com/go-sql-driver/mysql v1.6.0
+	github.com/joexzh/writeline v0.0.0-20220311092714-11e679adc6c4
 	github.com/pkg/errors v0.9.1
 	go.mongodb.org/mongo-driver v1.8.3
 	golang.org/x/text v0.3.7
