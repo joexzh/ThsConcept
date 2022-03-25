@@ -3,30 +3,29 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/joexzh/ThsConcept/config"
-	"github.com/joexzh/ThsConcept/fetch"
-	"github.com/joexzh/writeline"
 	"log"
 	"math/rand"
 	"sync"
 	"time"
 
+	"github.com/joexzh/ThsConcept/config"
+	"github.com/joexzh/ThsConcept/fetch"
+	"github.com/joexzh/writeline"
+
 	"github.com/joexzh/ThsConcept/model"
 	"github.com/joexzh/ThsConcept/repos"
 )
 
-var wl *writeline.LineWriter
+var lw *writeline.LineWriter
 
-func init() {
-	_wl, err := writeline.NewWithStdout(3)
+func retrieveData() {
+	_lw, err := writeline.New(1)
 	if err != nil {
 		log.Fatal(err)
 	}
-	wl = _wl
-}
+	lw = _lw
+	defer lw.Close()
 
-func retrieveData() {
-	defer wl.Close()
 	var wg sync.WaitGroup
 	log.Println("Starting to retrieve data")
 
@@ -46,7 +45,9 @@ func retrieveData() {
 }
 
 func retrieveConcept() {
-	wl.WriteLine(0, "开始获取concept...")
+	ln1, _ := lw.WriteNewLine("开始获取concept...")
+	ln2, _ := lw.WriteNewLine("")
+
 	throttleChan := make(chan struct{}, config.Throttle) // throttle goroutine, prevent system or network crash
 	rand.Seed(time.Now().UnixNano())                     // 用于每个goroutine随机睡眠
 
@@ -55,7 +56,7 @@ func retrieveConcept() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	wl.WriteLine(0, fmt.Sprint("开始获取concept...concept len: ", len(cids)))
+	lw.WriteLine(ln1, fmt.Sprint("开始获取concept...total:", len(cids)))
 
 	// get concepts from api
 	conceptChan := make(chan *model.Concept)
@@ -69,9 +70,9 @@ func retrieveConcept() {
 				if r := recover(); r != nil {
 					switch err := r.(type) {
 					case error:
-						wl.WriteNewLine(fmt.Sprintf(errStr, cid, err.Error()))
+						lw.WriteNewLine(fmt.Sprintf(errStr, cid, err.Error()))
 					default:
-						wl.WriteNewLine(fmt.Sprintf(errStr, cid, err))
+						lw.WriteNewLine(fmt.Sprintf(errStr, cid, err))
 					}
 
 					conceptChan <- nil
@@ -89,7 +90,8 @@ func retrieveConcept() {
 			if err != nil {
 				panic(err)
 			}
-			wl.WriteLine(1, fmt.Sprintf("从api获取了concept: %v...%v/%v", ret.Result.Name, len(conceptSlice)+1, len(cids)))
+			lw.WriteLine(ln1, fmt.Sprint("开始获取concept...", ret.Result.Name))
+			lw.WriteLine(ln2, fmt.Sprintf("从api获取了concept...%v/%v", len(conceptSlice)+1, len(cids)))
 			ret.Result.Define = define
 			concept, err := ret.ConvertToConcept()
 			if err != nil {
@@ -107,10 +109,10 @@ func retrieveConcept() {
 	}
 
 	if len(conceptSlice) < 1 {
-		wl.WriteLine(0, "获得的概念列表为空, 请检查网络或控制goroutine的并发数量")
+		lw.WriteLine(ln1, "获得的概念列表为空, 请检查网络或控制goroutine的并发数量")
 		return
 	}
-	wl.WriteLine(0, "开始获取concept...done")
+	lw.WriteLine(ln1, "开始获取concept...done")
 
 	ctx := context.Background()
 	repo, err := repos.NewConceptRepo()
@@ -123,13 +125,13 @@ func retrieveConcept() {
 		log.Default()
 		log.Fatal(err)
 	}
-	wl.WriteNewLine(fmt.Sprintf("UpdateConceptColl: deleted %v, updated %v", deleted, updated))
+	lw.WriteNewLine(fmt.Sprintf("UpdateConceptColl: deleted %v, updated %v", deleted, updated))
 
 	deleted, updated, err = repo.UpdateStockConcept(ctx, conceptSlice...)
 	if err != nil {
 		log.Fatal(err)
 	}
-	wl.WriteNewLine(fmt.Sprintf("UpdateStockConcept: deleted %v, updated %v", deleted, updated))
+	lw.WriteNewLine(fmt.Sprintf("UpdateStockConcept: deleted %v, updated %v", deleted, updated))
 }
 
 func retrieveSohuZdt() {
@@ -167,5 +169,5 @@ func retrieveSohuZdt() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	wl.WriteLine(2, fmt.Sprintf("zdt: inserted %v rows to stock_market/long_short", rows))
+	lw.WriteLine(0, fmt.Sprintf("zdt: inserted %v rows to stock_market/long_short", rows))
 }
