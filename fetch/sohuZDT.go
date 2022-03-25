@@ -1,7 +1,7 @@
 package fetch
 
 import (
-	"net/http"
+	"context"
 	"strconv"
 	"strings"
 	"time"
@@ -10,13 +10,14 @@ import (
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/joexzh/ThsConcept/model"
+	"github.com/joexzh/ThsConcept/util"
 )
 
 const errPrefix = "sohu api"
 
 // SohuZDT 从 html 页面 https://q.stock.sohu.com/cn/zdt.shtml 获取搜狐的涨跌停历史数据
-func SohuZDT() ([]model.ZDTHistory, error) {
-	resp, err := http.Get("https://q.stock.sohu.com/cn/zdt.shtml")
+func SohuZDT(ctx context.Context) ([]model.ZDTHistory, error) {
+	resp, err := util.HttpGet(ctx, "https://q.stock.sohu.com/cn/zdt.shtml", nil, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, errPrefix)
 	}

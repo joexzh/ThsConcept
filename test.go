@@ -1,13 +1,15 @@
 package main
 
 import (
+	"context"
 	"fmt"
-	"github.com/joexzh/ThsConcept/fetch"
 	"log"
+
+	"github.com/joexzh/ThsConcept/fetch"
 )
 
 func test() {
-	list, err := fetch.SohuZDT()
+	list, err := fetch.SohuZDT(context.Background())
 	if err != nil {
 		log.Panic(err)
 	}

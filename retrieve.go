@@ -135,7 +135,7 @@ func retrieveConcept() {
 }
 
 func retrieveSohuZdt() {
-	list, err := fetch.SohuZDT()
+	list, err := fetch.SohuZDT(context.Background())
 	if err != nil {
 		log.Fatal(err)
 	}
