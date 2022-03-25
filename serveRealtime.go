@@ -3,16 +3,18 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"github.com/gin-gonic/gin"
-	"github.com/joexzh/ThsConcept/dto"
-	"github.com/joexzh/ThsConcept/model"
-	"github.com/joexzh/ThsConcept/repos"
-	"github.com/joexzh/ThsConcept/util"
 	"io"
 	"log"
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
+
+	"github.com/gin-gonic/gin"
+	"github.com/joexzh/ThsConcept/dto"
+	"github.com/joexzh/ThsConcept/model"
+	"github.com/joexzh/ThsConcept/repos"
+	"github.com/joexzh/ThsConcept/util"
 )
 
 // Hop-by-hop headers. These are removed when sent to the backend.
@@ -58,7 +60,9 @@ func ginRealtimeApi(c *gin.Context) {
 	tag := c.Query("tag")
 	ctime, _ := strconv.ParseInt(c.Query("ctime"), 10, 64)
 
-	resp, err := util.HttpGetRealTime(int(page), int(pagesize), tag, int(ctime))
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	resp, err := util.HttpGetRealTime(ctx, int(page), int(pagesize), tag, int(ctime))
 	if err != nil {
 		log.Println(err.Error())
 		c.String(http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError))
@@ -89,7 +93,9 @@ func ginRealtimeApiRaw(c *gin.Context) {
 	tag := c.Query("tag")
 	ctime, _ := strconv.ParseInt(c.Query("ctime"), 10, 64)
 
-	resp, err := util.HttpGetRealTime(int(page), int(pagesize), tag, int(ctime))
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	resp, err := util.HttpGetRealTime(ctx, int(page), int(pagesize), tag, int(ctime))
 	if err != nil {
 		log.Println(err.Error())
 		c.String(http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError))
@@ -113,7 +119,8 @@ func ginRealtimeSaveMsg(c *gin.Context) {
 		return
 	}
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 	repo, err := repos.NewRealtimeRepo()
 	if err != nil {
 		log.Println(err)
@@ -133,7 +140,8 @@ func ginRealtimeDelMsg(c *gin.Context) {
 	userId := c.Param("userId")
 	objId := c.Query("objId")
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 	repo, err := repos.NewRealtimeRepo()
 	if err != nil {
 		c.AbortWithError(http.StatusInternalServerError, err)
@@ -151,7 +159,8 @@ func ginRealtimeDelMsg(c *gin.Context) {
 func ginRealtimeGetSavedMsgList(c *gin.Context) {
 	userId := c.Param("userId")
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 	repo, err := repos.NewRealtimeRepo()
 	if err != nil {
 		c.AbortWithError(http.StatusBadRequest, err)

@@ -1,15 +1,17 @@
 package util
 
 import (
-	"github.com/joexzh/ThsConcept/config"
+	"context"
 	"net/http"
 	"net/url"
 	"strconv"
+
+	"github.com/joexzh/ThsConcept/config"
 )
 
 // HttpGet Default header User-Agent will be auto set.
-func HttpGet(url string, headers map[string]string, query map[string]string) (*http.Response, error) {
-	req, err := http.NewRequest(http.MethodGet, url, nil)
+func HttpGet(ctx context.Context, url string, headers map[string]string, query map[string]string) (*http.Response, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -33,7 +35,7 @@ func appendRawQuery(url *url.URL, query map[string]string) string {
 // HttpGetRealTime
 //
 // all params are optional
-func HttpGetRealTime(page int, pagesize int, tag string, ctime int) (*http.Response, error) {
+func HttpGetRealTime(ctx context.Context, page int, pagesize int, tag string, ctime int) (*http.Response, error) {
 	query := make(map[string]string, 4)
 	if page > 0 {
 		query["page"] = strconv.FormatInt(int64(page), 10)
@@ -44,5 +46,5 @@ func HttpGetRealTime(page int, pagesize int, tag string, ctime int) (*http.Respo
 		query["ctime"] = strconv.FormatInt(int64(ctime), 10)
 	}
 
-	return HttpGet(config.RealTimeUrl, nil, query)
+	return HttpGet(ctx, config.RealTimeUrl, nil, query)
 }

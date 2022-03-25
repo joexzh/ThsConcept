@@ -1,11 +1,12 @@
 package fetch
 
 import (
-	"github.com/pkg/errors"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/pkg/errors"
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/joexzh/ThsConcept/model"

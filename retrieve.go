@@ -52,7 +52,8 @@ func retrieveConcept() {
 	rand.Seed(time.Now().UnixNano())                     // 用于每个goroutine随机睡眠
 
 	// get concept ids from page
-	cids, err := fetch.ConceptCodesFromPage()
+	ctx := context.Background()
+	cids, err := fetch.ConceptCodesFromPage(ctx)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -82,11 +83,11 @@ func retrieveConcept() {
 				<-throttleChan
 			}()
 
-			ret, err := fetch.ConceptFromConceptListApi(cid)
+			ret, err := fetch.ConceptFromConceptListApi(ctx, cid)
 			if err != nil {
 				panic(err)
 			}
-			define, err := fetch.ConceptDefineFromPage(cid)
+			define, err := fetch.ConceptDefineFromPage(ctx, cid)
 			if err != nil {
 				panic(err)
 			}
@@ -114,7 +115,6 @@ func retrieveConcept() {
 	}
 	lw.WriteLine(ln1, "开始获取concept...done")
 
-	ctx := context.Background()
 	repo, err := repos.NewConceptRepo()
 	if err != nil {
 		log.Fatal(err)

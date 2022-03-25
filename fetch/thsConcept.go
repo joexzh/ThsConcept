@@ -1,18 +1,20 @@
 package fetch
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"io"
+	"regexp"
+
 	"github.com/joexzh/ThsConcept/config"
 	"github.com/joexzh/ThsConcept/dto"
 	"github.com/joexzh/ThsConcept/util"
-	"io"
-	"regexp"
 )
 
 // ConceptCodesFromPage 从 html 页面 http://q.10jqka.com.cn/gn/ 获取概念列表
-func ConceptCodesFromPage() ([]string, error) {
-	res, err := util.HttpGet(config.ConceptAllUrl, nil, nil)
+func ConceptCodesFromPage(ctx context.Context) ([]string, error) {
+	res, err := util.HttpGet(ctx, config.ConceptAllUrl, nil, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -34,9 +36,9 @@ func ConceptCodesFromPage() ([]string, error) {
 }
 
 // ConceptFromConceptListApi 根据 conceptId 从 http://basic.10jqka.com.cn/ajax/stock/conceptlist.php?cid=%v 获取 concept list
-func ConceptFromConceptListApi(conceptId string) (*dto.ConceptListApiReturn, error) {
+func ConceptFromConceptListApi(ctx context.Context, conceptId string) (*dto.ConceptListApiReturn, error) {
 	url := fmt.Sprintf(config.ConceptApiUrl, conceptId)
-	res, err := util.HttpGet(url, nil, nil)
+	res, err := util.HttpGet(ctx, url, nil, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -56,9 +58,9 @@ func ConceptFromConceptListApi(conceptId string) (*dto.ConceptListApiReturn, err
 }
 
 // ConceptDefineFromPage 从 html 页面 http://q.10jqka.com.cn/gn/detail/code/%v/ 获取概念定义
-func ConceptDefineFromPage(conceptId string) (string, error) {
+func ConceptDefineFromPage(ctx context.Context, conceptId string) (string, error) {
 	url := fmt.Sprintf(config.ConceptDetailPageUrl, conceptId)
-	res, err := util.HttpGet(url, nil, nil)
+	res, err := util.HttpGet(ctx, url, nil, nil)
 	if err != nil {
 		return "", err
 	}

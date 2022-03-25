@@ -2,15 +2,16 @@ package main
 
 import (
 	"context"
+	"log"
+	"net/http"
+	"strconv"
+	"time"
+
 	"github.com/gin-gonic/gin"
 	"github.com/joexzh/ThsConcept/dto"
 	"github.com/joexzh/ThsConcept/joexzherror"
 	"github.com/joexzh/ThsConcept/repos"
 	"github.com/pkg/errors"
-	"log"
-	"net/http"
-	"strconv"
-	"time"
 )
 
 func ginQuery(c *gin.Context) {
@@ -72,7 +73,7 @@ func ginQuerySc(c *gin.Context) {
 	stockName := c.Query("stock")
 	conceptNameRegex := c.Query("concept")
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	dtos, err := scDtos(ctx, conceptNameRegex, stockName, int(limit))
 	if err != nil {
@@ -88,7 +89,7 @@ func ginPageSc(c *gin.Context) {
 	stockName := c.Query("stockname")
 	conceptRegex := c.Query("concept")
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	dtos, err := scDtos(ctx, conceptRegex, stockName, int(limit))
 	scPageDto := dto.ScPageDto{
