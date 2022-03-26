@@ -1,7 +1,7 @@
 FROM golang:1.17.7-alpine3.15 as builder
 RUN apk update && apk upgrade
 WORKDIR /app
-ENV GO111MODULE=on GOPROXY="https://goproxy.io"
+ENV GO111MODULE=on GOPROXY="https://goproxy.cn"
 COPY go.mod go.sum ./
 RUN go mod download -x
 COPY . .
