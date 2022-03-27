@@ -1,10 +1,12 @@
 package db
 
 import (
-	"database/sql"
+	"github.com/jmoiron/sqlx"
+	"strings"
+	"time"
+
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/joexzh/ThsConcept/config"
-	"time"
 )
 
 const (
@@ -13,7 +15,7 @@ const (
 )
 
 type mysqlClient struct {
-	pool *sql.DB
+	pool *sqlx.DB
 	err  error
 }
 
@@ -27,19 +29,33 @@ func init() {
 	}
 }
 
-func GetMysqlClient() (*sql.DB, error) {
+func GetMysqlClient() (*sqlx.DB, error) {
 	return _mysqlClient.pool, _mysqlClient.err
 }
 
 // newMysqlClient create mysql client, not connect yet.
-func newMysqlClient(dsn string) (*sql.DB, error) {
-	pool, err := sql.Open(Mysql, dsn)
+func newMysqlClient(dsn string) (*sqlx.DB, error) {
+	pool, err := sqlx.Open(Mysql, dsn)
 	if err != nil {
 		return nil, err
 	}
-	pool.SetConnMaxLifetime(3 * time.Minute)
-	pool.SetConnMaxIdleTime(10)
+	pool.SetConnMaxLifetime(0)
+	pool.SetConnMaxIdleTime(5 * time.Second)
 	pool.SetMaxOpenConns(10)
 
 	return pool, nil
+}
+
+// ParamList generates sql list part, (?,?,...?), question mark is used to replace the value.
+func ParamList(params ...interface{}) (string, []interface{}) {
+	var b strings.Builder
+	b.WriteString("(")
+	for i, _ := range params {
+		b.WriteString("?")
+		if i < len(params)-1 {
+			b.WriteString(",")
+		}
+	}
+	b.WriteString(")")
+	return b.String(), params
 }

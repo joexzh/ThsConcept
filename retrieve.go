@@ -115,23 +115,24 @@ func retrieveConcept() {
 	}
 	lw.WriteLine(ln1, "开始获取concept...done")
 
-	repo, err := repos.NewConceptRepo()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	deleted, updated, err := repo.UpdateConceptColl(ctx, conceptSlice...)
-	if err != nil {
-		log.Default()
-		log.Fatal(err)
-	}
-	lw.WriteNewLine(fmt.Sprintf("UpdateConceptColl: deleted %v, updated %v", deleted, updated))
-
-	deleted, updated, err = repo.UpdateStockConcept(ctx, conceptSlice...)
-	if err != nil {
-		log.Fatal(err)
-	}
-	lw.WriteNewLine(fmt.Sprintf("UpdateStockConcept: deleted %v, updated %v", deleted, updated))
+	// todo retrieve: save concept to db
+	// repo, err := repos.NewConceptRepo()
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+	//
+	// deleted, updated, err := repo.UpdateConceptColl(ctx, conceptSlice...)
+	// if err != nil {
+	// 	log.Default()
+	// 	log.Fatal(err)
+	// }
+	// lw.WriteNewLine(fmt.Sprintf("UpdateConceptColl: deleted %v, updated %v", deleted, updated))
+	//
+	// deleted, updated, err = repo.UpdateStockConcept(ctx, conceptSlice...)
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+	// lw.WriteNewLine(fmt.Sprintf("UpdateStockConcept: deleted %v, updated %v", deleted, updated))
 }
 
 func retrieveSohuZdt() {

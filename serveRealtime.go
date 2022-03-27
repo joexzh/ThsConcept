@@ -13,7 +13,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/joexzh/ThsConcept/dto"
 	"github.com/joexzh/ThsConcept/model"
-	"github.com/joexzh/ThsConcept/repos"
 	"github.com/joexzh/ThsConcept/util"
 )
 
@@ -68,13 +67,15 @@ func ginRealtimeApi(c *gin.Context) {
 		c.String(http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError))
 		return
 	}
-	defer resp.Body.Close()
+	defer func(Body io.ReadCloser) {
+		_ = Body.Close()
+	}(resp.Body)
 
 	decoder := json.NewDecoder(resp.Body)
 	var apiResp = dto.RealtimeResponse{}
 	if err = decoder.Decode(&apiResp); err != nil {
 		log.Println(err.Error())
-		c.AbortWithError(http.StatusInternalServerError, err)
+		_ = c.AbortWithError(http.StatusInternalServerError, err)
 		return
 	}
 
@@ -110,67 +111,35 @@ func ginRealtimeApiRaw(c *gin.Context) {
 }
 
 // save message list
-func ginRealtimeSaveMsg(c *gin.Context) {
-	userId := c.Param("userId")
+func ginSaveRealtimeArchive(c *gin.Context) {
 	var msg model.RealtimeMessage
 	if err := c.BindJSON(&msg); err != nil {
 		log.Println(err)
-		c.AbortWithError(http.StatusBadRequest, err)
+		_ = c.AbortWithError(http.StatusBadRequest, err)
 		return
 	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	repo, err := repos.NewRealtimeRepo()
-	if err != nil {
-		log.Println(err)
-		c.AbortWithStatus(http.StatusBadRequest)
-		return
-	}
-
-	if err = repo.SaveMessage(ctx, userId, &msg); err != nil {
-		log.Println(err)
-		c.AbortWithError(http.StatusBadRequest, err)
-		return
-	}
-	c.Status(http.StatusOK)
+	panic("not implemented")
+	// TODO gin save realtime msg
+	// c.Status(http.StatusOK)
 }
 
-func ginRealtimeDelMsg(c *gin.Context) {
-	userId := c.Param("userId")
-	objId := c.Query("objId")
-
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	repo, err := repos.NewRealtimeRepo()
-	if err != nil {
-		c.AbortWithError(http.StatusInternalServerError, err)
-		return
-	}
-
-	if err = repo.DelSaveMessage(ctx, userId, objId); err != nil {
-		c.AbortWithError(http.StatusBadRequest, err)
-		return
-	}
-	c.Status(http.StatusOK)
+func ginDeleteRealtimeArchive(c *gin.Context) {
+	// userId := c.Param("userId")
+	// objId := c.Query("objId")
+	//
+	// ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	// defer cancel()
+	panic("not implemented")
+	// TODO gin delete realtime msg
+	// c.Status(http.StatusOK)
 }
 
 // retrieve saved message list
-func ginRealtimeGetSavedMsgList(c *gin.Context) {
-	userId := c.Param("userId")
-
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	repo, err := repos.NewRealtimeRepo()
-	if err != nil {
-		c.AbortWithError(http.StatusBadRequest, err)
-		return
-	}
-
-	list, err := repo.QuerySaveMessageDesc(ctx, userId)
-	if err != nil {
-		c.AbortWithError(http.StatusBadRequest, err)
-		return
-	}
-	c.JSON(http.StatusOK, list)
+func ginRealtimeArchive(c *gin.Context) {
+	// userId := c.Param("userId")
+	// ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	// defer cancel()
+	panic("not implemented")
+	// TODO gin get realtime msg
+	// c.JSON(http.StatusOK, list)
 }

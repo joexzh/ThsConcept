@@ -3,6 +3,8 @@ package config
 import (
 	"fmt"
 	"os"
+	"sync"
+	"time"
 )
 
 const (
@@ -37,6 +39,8 @@ const (
 	SleepRandUpTo = 500
 )
 
+var loc *time.Location
+
 type Env struct {
 	MongoUser     string
 	MongoPassword string
@@ -53,47 +57,55 @@ type Env struct {
 }
 
 var env = Env{}
+var once sync.Once
 
 func init() {
-	if os.Getenv("MONGO_USER") == "" {
-		panic("MONGO_USER is not set")
-	}
-	env.MongoUser = os.Getenv("MONGO_USER")
-
-	if os.Getenv("MONGO_PASSWORD") == "" {
-		panic("MONGO_PASSWORD is not set")
-	}
-	env.MongoPassword = os.Getenv("MONGO_PASSWORD")
-
-	if os.Getenv("MONGO_HOST_PORT") == "" {
-		panic("MONGO_HOST_PORT is not set")
-	}
-	env.MongoHostPort = os.Getenv("MONGO_HOST_PORT")
-
-	if os.Getenv("mysql_user") == "" {
-		panic("mysql_user is not set")
-	}
-	env.MysqlUser = os.Getenv("mysql_user")
-
-	if os.Getenv("mysql_password") == "" {
-		panic("mysql_password is not set")
-	}
-	env.MysqlPassword = os.Getenv("mysql_password")
-
-	if os.Getenv("mysql_host") == "" {
-		panic("mysql_host is not set")
-	}
-	env.MysqlHost = os.Getenv("mysql_host")
-
-	if os.Getenv("mysql_port") == "" {
-		panic("mysql_port is not set")
-	}
-	env.MysqlPort = os.Getenv("mysql_port")
-
-	env.MongoConnStr = fmt.Sprintf(`mongodb://%s:%s@%s`, env.MongoUser, env.MongoPassword, env.MongoHostPort)
-	env.MysqlConnStr = fmt.Sprintf("%s:%s@tcp(%s:%s)/stock_market?parseTime=true", env.MysqlUser, env.MysqlPassword, env.MysqlHost, env.MysqlPort)
+	loc, _ = time.LoadLocation(TimeLocal)
 }
 
 func GetEnv() *Env {
+	once.Do(func() {
+		if os.Getenv("MONGO_USER") == "" {
+			panic("MONGO_USER is not set")
+		}
+		env.MongoUser = os.Getenv("MONGO_USER")
+
+		if os.Getenv("MONGO_PASSWORD") == "" {
+			panic("MONGO_PASSWORD is not set")
+		}
+		env.MongoPassword = os.Getenv("MONGO_PASSWORD")
+
+		if os.Getenv("MONGO_HOST_PORT") == "" {
+			panic("MONGO_HOST_PORT is not set")
+		}
+		env.MongoHostPort = os.Getenv("MONGO_HOST_PORT")
+
+		if os.Getenv("mysql_user") == "" {
+			panic("mysql_user is not set")
+		}
+		env.MysqlUser = os.Getenv("mysql_user")
+
+		if os.Getenv("mysql_password") == "" {
+			panic("mysql_password is not set")
+		}
+		env.MysqlPassword = os.Getenv("mysql_password")
+
+		if os.Getenv("mysql_host") == "" {
+			panic("mysql_host is not set")
+		}
+		env.MysqlHost = os.Getenv("mysql_host")
+
+		if os.Getenv("mysql_port") == "" {
+			panic("mysql_port is not set")
+		}
+		env.MysqlPort = os.Getenv("mysql_port")
+
+		env.MongoConnStr = fmt.Sprintf(`mongodb://%s:%s@%s`, env.MongoUser, env.MongoPassword, env.MongoHostPort)
+		env.MysqlConnStr = fmt.Sprintf("%s:%s@tcp(%s:%s)/stock_market?parseTime=true", env.MysqlUser, env.MysqlPassword, env.MysqlHost, env.MysqlPort)
+	})
 	return &env
+}
+
+func ChinaLoc() *time.Location {
+	return loc
 }

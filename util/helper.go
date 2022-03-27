@@ -5,8 +5,6 @@ import (
 	"golang.org/x/text/encoding/simplifiedchinese"
 	"golang.org/x/text/transform"
 	"io"
-	"os"
-	"path/filepath"
 )
 
 func RemoveDuplicate(slice []string) []string {
@@ -41,9 +39,4 @@ func Utf8ToGbk(s []byte) ([]byte, error) {
 		return nil, e
 	}
 	return d, nil
-}
-
-func ExeDir() string {
-	file, _ := os.Executable()
-	return filepath.Dir(file)
 }
