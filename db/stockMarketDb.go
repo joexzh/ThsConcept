@@ -3,6 +3,7 @@ package db
 import (
 	"github.com/jmoiron/sqlx"
 	"strings"
+	"sync"
 	"time"
 
 	_ "github.com/go-sql-driver/mysql"
@@ -20,16 +21,16 @@ type mysqlClient struct {
 }
 
 var _mysqlClient *mysqlClient
-
-func init() {
-	db, err := newMysqlClient(config.GetEnv().MysqlConnStr)
-	_mysqlClient = &mysqlClient{
-		pool: db,
-		err:  err,
-	}
-}
+var once sync.Once
 
 func GetMysqlClient() (*sqlx.DB, error) {
+	once.Do(func() {
+		db, err := newMysqlClient(config.GetEnv().MysqlConnStr)
+		_mysqlClient = &mysqlClient{
+			pool: db,
+			err:  err,
+		}
+	})
 	return _mysqlClient.pool, _mysqlClient.err
 }
 
@@ -47,15 +48,17 @@ func newMysqlClient(dsn string) (*sqlx.DB, error) {
 }
 
 // ParamList generates sql list part, (?,?,...?), question mark is used to replace the value.
-func ParamList(params ...interface{}) (string, []interface{}) {
+func ParamList[T any](params ...T) (string, []interface{}) {
 	var b strings.Builder
+	var vals []interface{}
 	b.WriteString("(")
 	for i, _ := range params {
 		b.WriteString("?")
 		if i < len(params)-1 {
 			b.WriteString(",")
 		}
+		vals = append(vals, params[i])
 	}
 	b.WriteString(")")
-	return b.String(), params
+	return b.String(), vals
 }

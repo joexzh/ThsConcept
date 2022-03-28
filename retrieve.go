@@ -10,22 +10,12 @@ import (
 
 	"github.com/joexzh/ThsConcept/config"
 	"github.com/joexzh/ThsConcept/fetch"
-	"github.com/joexzh/writeline"
 
 	"github.com/joexzh/ThsConcept/model"
 	"github.com/joexzh/ThsConcept/repos"
 )
 
-var lw *writeline.LineWriter
-
 func retrieveData() {
-	_lw, err := writeline.New(1)
-	if err != nil {
-		log.Fatal(err)
-	}
-	lw = _lw
-	defer lw.Close()
-
 	var wg sync.WaitGroup
 	log.Println("Starting to retrieve data")
 
@@ -45,9 +35,6 @@ func retrieveData() {
 }
 
 func retrieveConcept() {
-	ln1, _ := lw.WriteNewLine("开始获取concept...")
-	ln2, _ := lw.WriteNewLine("")
-
 	throttleChan := make(chan struct{}, config.Throttle) // throttle goroutine, prevent system or network crash
 	rand.Seed(time.Now().UnixNano())                     // 用于每个goroutine随机睡眠
 
@@ -57,23 +44,23 @@ func retrieveConcept() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	lw.WriteLine(ln1, fmt.Sprint("开始获取concept...total:", len(cids)))
+	log.Println("concept: start retrieve, total:", len(cids))
 
 	// get concepts from api
 	conceptChan := make(chan *model.Concept)
-	conceptSlice := make([]model.Concept, 0, len(cids))
+	conceptSlice := make([]*model.Concept, 0, len(cids))
 	for _, cid := range cids {
 		go func(cid string) {
 			throttleChan <- struct{}{}
-			errStr := "goroutine 2 error: conceptId: %v, err: %v"
+			errStr := "concept: goroutine 2 error: conceptId: %v, err: %v"
 
 			defer func() {
 				if r := recover(); r != nil {
 					switch err := r.(type) {
 					case error:
-						lw.WriteNewLine(fmt.Sprintf(errStr, cid, err.Error()))
+						log.Println(fmt.Sprintf(errStr, cid, err.Error()))
 					default:
-						lw.WriteNewLine(fmt.Sprintf(errStr, cid, err))
+						log.Println(fmt.Sprintf(errStr, cid, err))
 					}
 
 					conceptChan <- nil
@@ -91,8 +78,6 @@ func retrieveConcept() {
 			if err != nil {
 				panic(err)
 			}
-			lw.WriteLine(ln1, fmt.Sprint("开始获取concept...", ret.Result.Name))
-			lw.WriteLine(ln2, fmt.Sprintf("从api获取了concept...%v/%v", len(conceptSlice)+1, len(cids)))
 			ret.Result.Define = define
 			concept, err := ret.ConvertToConcept()
 			if err != nil {
@@ -105,34 +90,25 @@ func retrieveConcept() {
 	for i := 0; i < len(cids); i++ {
 		concept := <-conceptChan
 		if concept != nil {
-			conceptSlice = append(conceptSlice, *concept)
+			conceptSlice = append(conceptSlice, concept)
 		}
 	}
 
 	if len(conceptSlice) < 1 {
-		lw.WriteLine(ln1, "获得的概念列表为空, 请检查网络或控制goroutine的并发数量")
+		log.Println("concept: 获得的概念列表为空, 请检查网络或控制goroutine的并发数量")
 		return
 	}
-	lw.WriteLine(ln1, "开始获取concept...done")
+	log.Println("concept: retrieve done")
 
-	// todo retrieve: save concept to db
-	// repo, err := repos.NewConceptRepo()
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-	//
-	// deleted, updated, err := repo.UpdateConceptColl(ctx, conceptSlice...)
-	// if err != nil {
-	// 	log.Default()
-	// 	log.Fatal(err)
-	// }
-	// lw.WriteNewLine(fmt.Sprintf("UpdateConceptColl: deleted %v, updated %v", deleted, updated))
-	//
-	// deleted, updated, err = repo.UpdateStockConcept(ctx, conceptSlice...)
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-	// lw.WriteNewLine(fmt.Sprintf("UpdateStockConcept: deleted %v, updated %v", deleted, updated))
+	repo, err := repos.NewStockMarketRepo()
+	if err != nil {
+		log.Fatal(err)
+	}
+	updateResult, err := repo.UpdateConcept(ctx, conceptSlice...)
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Printf("concept: update result: %+v\n", updateResult)
 }
 
 func retrieveSohuZdt() {
@@ -170,5 +146,5 @@ func retrieveSohuZdt() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	lw.WriteLine(0, fmt.Sprintf("zdt: inserted %v rows to stock_market/long_short", rows))
+	log.Printf("zdt: inserted %v rows to stock_market/long_short\n", rows)
 }

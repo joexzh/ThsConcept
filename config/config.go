@@ -42,11 +42,6 @@ const (
 var loc *time.Location
 
 type Env struct {
-	MongoUser     string
-	MongoPassword string
-	MongoHostPort string
-	MongoConnStr  string
-
 	ServerPort string
 
 	MysqlUser     string
@@ -65,21 +60,6 @@ func init() {
 
 func GetEnv() *Env {
 	once.Do(func() {
-		if os.Getenv("MONGO_USER") == "" {
-			panic("MONGO_USER is not set")
-		}
-		env.MongoUser = os.Getenv("MONGO_USER")
-
-		if os.Getenv("MONGO_PASSWORD") == "" {
-			panic("MONGO_PASSWORD is not set")
-		}
-		env.MongoPassword = os.Getenv("MONGO_PASSWORD")
-
-		if os.Getenv("MONGO_HOST_PORT") == "" {
-			panic("MONGO_HOST_PORT is not set")
-		}
-		env.MongoHostPort = os.Getenv("MONGO_HOST_PORT")
-
 		if os.Getenv("mysql_user") == "" {
 			panic("mysql_user is not set")
 		}
@@ -100,7 +80,6 @@ func GetEnv() *Env {
 		}
 		env.MysqlPort = os.Getenv("mysql_port")
 
-		env.MongoConnStr = fmt.Sprintf(`mongodb://%s:%s@%s`, env.MongoUser, env.MongoPassword, env.MongoHostPort)
 		env.MysqlConnStr = fmt.Sprintf("%s:%s@tcp(%s:%s)/stock_market?parseTime=true", env.MysqlUser, env.MysqlPassword, env.MysqlHost, env.MysqlPort)
 	})
 	return &env

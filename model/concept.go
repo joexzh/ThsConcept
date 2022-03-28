@@ -5,14 +5,12 @@ import (
 )
 
 type ConceptStock struct {
-	StockCode         string    `json:"stockCode"`
-	StockName         string    `json:"stockName"`
-	PinyinFirstLetter string    `json:"pinyinFirstLetter"`
-	PinyinNormal      string    `json:"pinyinNormal"`
-	ConceptId         string    `json:"conceptId"`
-	ConceptName       string    `json:"conceptName"`
-	Description       string    `json:"description"`
-	UpdatedAt         time.Time `json:"updatedAt"`
+	StockCode   string    `json:"stockCode" db:"stock_code"`
+	StockName   string    `json:"stockName" db:"stock_name"`
+	ConceptId   string    `json:"conceptId" db:"concept_id"`
+	ConceptName string    `json:"conceptName" db:"concept_name"`
+	Description string    `json:"description" db:"description"`
+	UpdatedAt   time.Time `json:"updatedAt" db:"updated_at"`
 }
 
 func (s *ConceptStock) CmpConcept(o *ConceptStock) bool {
@@ -23,9 +21,7 @@ func (s *ConceptStock) CmpConcept(o *ConceptStock) bool {
 
 func (s *ConceptStock) CmpStock(o *ConceptStock) bool {
 	return s.StockCode == o.StockCode &&
-		s.StockName == o.StockName &&
-		s.PinyinFirstLetter == o.PinyinFirstLetter &&
-		s.PinyinNormal == o.PinyinNormal
+		s.StockName == o.StockName
 }
 
 type ConceptStockByUpdateAtDesc []*ConceptStock
@@ -39,13 +35,11 @@ func (b ConceptStockByUpdateAtDesc) Swap(i, j int) {
 }
 
 type Concept struct {
-	Id                string    `json:"id"`
-	Name              string    `json:"name"`
-	PinyinFirstLetter string    `json:"pinyinFirstLetter"`
-	PinyinNormal      string    `json:"pinyinNormal"`
-	PlateId           int       `json:"plateId"`
-	Define            string    `json:"define"`
-	UpdatedAt         time.Time `json:"updatedAt"`
+	Id        string    `json:"id" db:"id"`
+	Name      string    `json:"name" db:"name"`
+	PlateId   int       `json:"plateId" db:"plate_id"`
+	Define    string    `json:"define" db:"define"`
+	UpdatedAt time.Time `json:"updatedAt" db:"updated_at"`
 
 	Stocks []*ConceptStock `json:"stocks"`
 }
@@ -53,8 +47,6 @@ type Concept struct {
 func (c *Concept) Cmp(o *Concept) bool {
 	return c.Id == o.Id &&
 		c.Name == o.Name &&
-		c.PinyinFirstLetter == o.PinyinFirstLetter &&
-		c.PinyinNormal == o.PinyinNormal &&
 		c.PlateId == o.PlateId &&
 		c.Define == o.Define
 }

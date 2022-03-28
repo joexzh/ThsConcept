@@ -1,6 +1,6 @@
 module github.com/joexzh/ThsConcept
 
-go 1.17
+go 1.18
 
 require (
 	github.com/PuerkitoBio/goquery v1.8.0
@@ -8,9 +8,8 @@ require (
 	github.com/gin-gonic/gin v1.7.7
 	github.com/go-sql-driver/mysql v1.6.0
 	github.com/jmoiron/sqlx v1.3.4
-	github.com/joexzh/writeline v0.0.0-20220324150854-269845d6fda0
-	github.com/mozillazg/go-pinyin v0.19.0
 	github.com/pkg/errors v0.9.1
+	golang.org/x/text v0.3.7
 )
 
 require (
@@ -30,7 +29,6 @@ require (
 	golang.org/x/crypto v0.0.0-20220214200702-86341886e292 // indirect
 	golang.org/x/net v0.0.0-20211112202133-69e39bad7dc2 // indirect
 	golang.org/x/sys v0.0.0-20220319134239-a9b59b0215f8 // indirect
-	golang.org/x/text v0.3.7 // indirect
 	google.golang.org/protobuf v1.27.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 )

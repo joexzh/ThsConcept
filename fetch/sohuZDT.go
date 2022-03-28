@@ -2,6 +2,7 @@ package fetch
 
 import (
 	"context"
+	"github.com/joexzh/ThsConcept/config"
 	"strconv"
 	"strings"
 	"time"
@@ -76,11 +77,10 @@ func parseTd(i int, td *goquery.Selection, zdt *model.ZDTHistory, now time.Time)
 		if int64(now.Month()) < month {
 			year -= 1
 		}
-		loc, err := time.LoadLocation("UTC")
 		if err != nil {
 			return err
 		}
-		zdt.Date = time.Date(year, time.Month(month), int(day), 0, 0, 0, 0, loc)
+		zdt.Date = time.Date(year, time.Month(month), int(day), 16, 0, 0, 0, config.ChinaLoc())
 
 	case 1, 2, 3, 5, 6, 7, 8, 9, 10:
 		num, err := strconv.ParseInt(text, 10, 16)

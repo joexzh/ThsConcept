@@ -1,7 +1,7 @@
 package dto
 
 import (
-	"github.com/joexzh/ThsConcept/util"
+	"log"
 	"time"
 
 	"github.com/joexzh/ThsConcept/config"
@@ -38,29 +38,37 @@ func (ret *ConceptListApiReturn) ConvertToConcept() (*model.Concept, error) {
 	}
 
 	concept := &model.Concept{
-		Id:                ret.ConceptId,
-		Name:              ret.Result.Name,
-		PinyinFirstLetter: util.Pinyin(ret.Result.Name, util.PinyinFirstLetterArgs),
-		PinyinNormal:      util.Pinyin(ret.Result.Name, util.PinyinNormalArgs),
-		PlateId:           ret.Result.Plateid,
-		Define:            ret.Result.Define,
-		UpdatedAt:         t,
-		Stocks:            make([]*model.ConceptStock, 0),
+		Id:        ret.ConceptId,
+		Name:      ret.Result.Name,
+		PlateId:   ret.Result.Plateid,
+		Define:    ret.Result.Define,
+		UpdatedAt: t,
+		Stocks:    make([]*model.ConceptStock, 0),
+	}
+	if concept.Name == "" {
+		log.Printf("Concept name is empty, condept_id: %s\n", ret.ConceptId)
+	}
+	if concept.Define == "" {
+		log.Printf("Concept define is empty, condept_id: %s\n", ret.ConceptId)
 	}
 
 	for _, v := range ret.Result.Listdata {
 		for _, arr := range v {
 			stock := &model.ConceptStock{
-				StockCode:         arr[0].(string),
-				StockName:         arr[1].(string),
-				PinyinFirstLetter: util.Pinyin(arr[1].(string), util.PinyinFirstLetterArgs),
-				PinyinNormal:      util.Pinyin(arr[1].(string), util.PinyinNormalArgs),
-				ConceptId:         ret.ConceptId,
-				ConceptName:       ret.Result.Name,
-				Description:       arr[8].(string),
-				UpdatedAt:         now,
+				StockCode:   arr[0].(string),
+				StockName:   arr[1].(string),
+				ConceptId:   ret.ConceptId,
+				ConceptName: ret.Result.Name,
+				Description: arr[8].(string),
+				UpdatedAt:   now,
 			}
 			concept.Stocks = append(concept.Stocks, stock)
+			if stock.StockName == "" {
+				log.Printf("Concept stock name is empty, concept_id: %s, code: %s\n", ret.ConceptId, stock.StockCode)
+			}
+			if stock.Description == "" {
+				log.Printf("Concept stock description is empty, concept_id: %s, code: %s\n", ret.ConceptId, stock.StockCode)
+			}
 		}
 	}
 	return concept, nil
