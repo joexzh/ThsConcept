@@ -43,10 +43,10 @@ type RealtimeMessageStock struct {
 type RealtimeMessageStocks []RealtimeMessageStock
 
 func (s *RealtimeMessageStocks) Scan(src interface{}) error {
-	return db.Scan(s, src)
+	return db.JsonScan(s, src)
 }
 func (s RealtimeMessageStocks) Value() (driver.Value, error) {
-	return db.Value(s)
+	return db.JsonValue(s)
 }
 
 type RealtimeTagInfo struct {
@@ -59,10 +59,10 @@ type RealtimeTagInfo struct {
 type RealtimeTagInfos []RealtimeTagInfo
 
 func (i *RealtimeTagInfos) Scan(src interface{}) error {
-	return db.Scan(i, src)
+	return db.JsonScan(i, src)
 }
 func (i RealtimeTagInfos) Value() (driver.Value, error) {
-	return db.Value(i)
+	return db.JsonValue(i)
 }
 
 type RealtimeTag struct {
@@ -74,8 +74,8 @@ type RealtimeTag struct {
 type RealtimeTags []RealtimeTag
 
 func (t *RealtimeTags) Scan(src interface{}) error {
-	return db.Scan(t, src)
+	return db.JsonScan(t, src)
 }
 func (t RealtimeTags) Value() (driver.Value, error) {
-	return db.Value(t)
+	return db.JsonValue(t)
 }

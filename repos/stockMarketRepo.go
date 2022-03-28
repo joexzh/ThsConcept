@@ -28,17 +28,20 @@ func (repo *StockMarketRepo) ZdtListDesc(ctx context.Context, start time.Time, l
 	if limit < 1 || limit > 1000 {
 		limit = 1000
 	}
-
 	list := make([]model.ZDTHistory, 0)
-
 	err := repo.db.SelectContext(
 		ctx,
 		&list,
-		"SELECT * FROM long_short WHERE date >= ? ORDER BY date LIMIT ?",
+		"SELECT * FROM long_short WHERE date >= ? ORDER BY date DESC LIMIT ?",
 		start, limit)
 	if err != nil {
 		return nil, errors.Wrap(err, db.Mysql)
 	}
+	// reverse
+	for i, j := 0, len(list)-1; i < j; i, j = i+1, j-1 {
+		list[i], list[j] = list[j], list[i]
+	}
+
 	return list, nil
 }
 
@@ -53,7 +56,7 @@ func (repo *StockMarketRepo) InsertZdtList(ctx context.Context, list []model.ZDT
 	}
 	defer tx.Rollback()
 
-	stmt, err := tx.Preparex("INSERT INTO long_short VALUES (?,?,?,?,?,?,?,?,?,?,?)")
+	stmt, err := tx.Prepare("INSERT INTO long_short VALUES (?,?,?,?,?,?,?,?,?,?,?)")
 	if err != nil {
 		return 0, errors.Wrap(err, db.Mysql)
 	}

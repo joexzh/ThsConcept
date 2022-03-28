@@ -6,7 +6,8 @@ import (
 	"fmt"
 )
 
-func Scan[T any](dest T, src interface{}) error {
+// JsonScan unmarshal DB json type into dest, dest must be a pointer
+func JsonScan[T any](dest T, src interface{}) error {
 	var source []byte
 	switch src.(type) {
 	case []uint8:
@@ -23,7 +24,7 @@ func Scan[T any](dest T, src interface{}) error {
 	return nil
 }
 
-func Value[T any](src T) (driver.Value, error) {
+func JsonValue[T any](src T) (driver.Value, error) {
 	j, err := json.Marshal(src)
 	if err != nil {
 		return nil, err
