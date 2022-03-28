@@ -25,14 +25,17 @@ func NewStockMarketRepo() (*StockMarketRepo, error) {
 }
 
 func (repo *StockMarketRepo) ZdtListDesc(ctx context.Context, start time.Time, limit int) ([]model.ZDTHistory, error) {
-	if limit < 1 {
-		limit = db.Limit
+	if limit < 1 || limit > 1000 {
+		limit = 1000
 	}
 
-	var list []model.ZDTHistory
+	list := make([]model.ZDTHistory, 0)
 
-	err := repo.db.SelectContext(ctx, &list,
-		"SELECT * FROM long_short WHERE date >= ? ORDER BY date DESC LIMIT ?", start, limit)
+	err := repo.db.SelectContext(
+		ctx,
+		&list,
+		"SELECT * FROM long_short WHERE date >= ? ORDER BY date LIMIT ?",
+		start, limit)
 	if err != nil {
 		return nil, errors.Wrap(err, db.Mysql)
 	}
@@ -71,17 +74,25 @@ func (repo *StockMarketRepo) InsertZdtList(ctx context.Context, list []model.ZDT
 	return total, nil
 }
 
-const stockModelSql = `SELECT
-	s.code AS stock_code,
-	s.name AS stock_name,
-	c.id AS concept_id,
-	c.name AS concept_name,
-	sc.description,
-	sc.updated_at 
-FROM
-	concept_stock AS s
-	INNER JOIN concept_stock_concept AS sc ON sc.stock_code = s.CODE
-	INNER JOIN concept_concept AS c ON c.id = sc.concept_id`
+func scsToConceptMap(scs []*model.ConceptStock) map[string]*model.Concept {
+	conceptMap := make(map[string]*model.Concept)
+	for _, sc := range scs {
+		concept, ok := conceptMap[sc.ConceptId]
+		if !ok {
+			concept = &model.Concept{
+				Id:        sc.ConceptId,
+				Name:      sc.ConceptName,
+				PlateId:   sc.ConceptPlateId,
+				Define:    sc.ConceptDefine,
+				UpdatedAt: sc.ConceptUpdatedAt,
+				Stocks:    make([]*model.ConceptStock, 0),
+			}
+			conceptMap[sc.ConceptId] = concept
+		}
+		concept.Stocks = append(concept.Stocks, sc)
+	}
+	return conceptMap
+}
 
 type UpdateConceptResult struct {
 	ConceptConceptInserted      int64
@@ -105,25 +116,29 @@ func (repo *StockMarketRepo) UpdateConcept(ctx context.Context, newcs ...*model.
 	defer tx.Rollback()
 
 	// query old concepts and stocks from db for update
-	var oldcs []*model.Concept
-	oldcsMap := make(map[string]*model.Concept)
-	err = tx.SelectContext(ctx, &oldcs, "SELECT * FROM concept_concept for update")
+	var oldscs []*model.ConceptStock
+	err = tx.SelectContext(
+		ctx,
+		&oldscs,
+		`SELECT
+	s.CODE AS stock_code,
+	s.NAME AS stock_name,
+	sc.updated_at,
+	sc.description,
+	c.id AS concept_id,
+	c.NAME AS concept_name,
+	c.plate_id AS concept_plate_id,
+	c.define AS concept_define,
+	c.updated_at AS concept_updated_at 
+FROM
+	concept_stock AS s
+	INNER JOIN concept_stock_concept AS sc ON sc.stock_code = s.
+	CODE INNER JOIN concept_concept AS c ON c.id = sc.concept_id
+for update`)
 	if err != nil {
 		return result, errors.Wrap(err, db.Mysql)
 	}
-	stockByConceptIdStmt, err := tx.Preparex(stockModelSql + " WHERE c.id = ? for update")
-	if err != nil {
-		return result, errors.Wrap(err, db.Mysql)
-	}
-	for _, oldc := range oldcs {
-		var stocks []*model.ConceptStock
-		err = stockByConceptIdStmt.SelectContext(ctx, &stocks, oldc.Id)
-		if err != nil {
-			return result, errors.Wrap(err, db.Mysql)
-		}
-		oldc.Stocks = stocks
-		oldcsMap[oldc.Id] = oldc
-	}
+	oldcsMap := scsToConceptMap(oldscs)
 
 	// 1. delete un-exist concepts
 	cids := make([]string, 0, len(newcs))
@@ -290,71 +305,143 @@ func (repo *StockMarketRepo) UpdateConcept(ctx context.Context, newcs ...*model.
 	return result, nil
 }
 
-func (repo *StockMarketRepo) QueryStockConcept(ctx context.Context, stockKw string, conceptKw string, limit int) (
-	[]*model.Concept, error) {
+func (repo *StockMarketRepo) QueryConceptStock(ctx context.Context, stockKw string, conceptKw string, limit int) (
+	[]*model.ConceptStock, error) {
 
-	if limit < 0 || limit > 1000 {
+	if limit < 1 || limit > 1000 {
 		limit = 1000
 	}
-	// query stock concept
-	const scSql = stockModelSql + `
+	const scSql = `SELECT
+	s.CODE AS stock_code,
+	s.NAME AS stock_name,
+	sc.updated_at,
+	sc.description,
+	c.id AS concept_id,
+	c.NAME AS concept_name,
+	c.plate_id AS concept_plate_id,
+	c.define AS concept_define,
+	c.updated_at AS concept_updated_at 
+FROM
+	concept_stock AS s
+	INNER JOIN concept_stock_concept AS sc ON sc.stock_code = s.
+	CODE INNER JOIN concept_concept AS c ON c.id = sc.concept_id
 WHERE
-	s.CODE = ? 
-	OR s.NAME = ? 
-	OR c.NAME = ? 
+	(
+		s.CODE = IFNULL(?, s.code)
+		OR s.NAME = IFNULL(?, s.name)
+	) 
+	and c.NAME = IFNULL(?, c.name) 
 ORDER BY
 	sc.updated_at DESC 
 	LIMIT ?`
-	rows, err := repo.db.QueryxContext(ctx, scSql, stockKw, stockKw, conceptKw, limit)
-	if err != nil {
-		return nil, errors.Wrap(err, db.Mysql)
+	vals := make([]interface{}, 4)
+	if stockKw == "" {
+		vals[0] = nil
+		vals[1] = nil
+	} else {
+		vals[0] = stockKw
+		vals[1] = stockKw
 	}
-	stockMapByConcept := make(map[string][]*model.ConceptStock)
-	for rows.Next() {
-		var stock model.ConceptStock
-		err = rows.StructScan(&stock)
-		if err != nil {
-			_ = rows.Close()
-			return nil, errors.Wrap(err, db.Mysql)
-		}
-		stockMapByConcept[stock.ConceptId] = append(stockMapByConcept[stock.ConceptId], &stock)
+	if conceptKw == "" {
+		vals[2] = nil
+	} else {
+		vals[2] = conceptKw
 	}
+	vals[3] = limit
 
-	// query concept
-	conceptIds := make([]string, 0, len(stockMapByConcept))
-	for conceptId := range stockMapByConcept {
-		conceptIds = append(conceptIds, conceptId)
-	}
-	listSql, vals := db.ParamList(conceptIds...)
-	rows, err = repo.db.QueryxContext(ctx,
-		fmt.Sprintf("SELECT * FROM concept_concept WHERE id IN %s order by updated_at desc", listSql), vals...)
+	scs := make([]*model.ConceptStock, 0)
+	err := repo.db.SelectContext(ctx, &scs, scSql, vals...)
 	if err != nil {
 		return nil, errors.Wrap(err, db.Mysql)
 	}
-	var concepts []*model.Concept
-	for rows.Next() {
-		var concept model.Concept
-		err = rows.StructScan(&concept)
-		if err != nil {
-			_ = rows.Close()
-			return nil, errors.Wrap(err, db.Mysql)
-		}
-		concept.Stocks = stockMapByConcept[concept.Id]
-		concepts = append(concepts, &concept)
+	return scs, nil
+}
+
+func (repo *StockMarketRepo) QueryConcepts(ctx context.Context, conceptKw string, limit int) ([]*model.Concept, error) {
+	if limit < 1 || limit > 1000 {
+		limit = 1000
+	}
+	concepts := make([]*model.Concept, 0)
+	var conceptVal interface{}
+	if conceptKw != "" {
+		conceptVal = conceptKw
+	}
+	err := repo.db.SelectContext(
+		ctx,
+		&concepts,
+		"select * from concept_concept where name=IFNULL(?, name) order by updated_at desc limit ?",
+		conceptVal, limit)
+	if err != nil {
+		return nil, errors.Wrap(err, db.Mysql)
 	}
 	return concepts, nil
 }
 
-func (repo *StockMarketRepo) QueryRealtime() {
-	// TODO query realtime
+func (repo *StockMarketRepo) QueryStockByConceptId(ctx context.Context, conceptId string) ([]*model.ConceptStock, error) {
+	scs := make([]*model.ConceptStock, 0)
+	err := repo.db.SelectContext(
+		ctx,
+		&scs,
+		`SELECT
+	s.CODE AS stock_code,
+	s.NAME AS stock_name,
+	sc.updated_at,
+	sc.description,
+	c.id AS concept_id,
+	c.NAME AS concept_name,
+	c.plate_id AS concept_plate_id,
+	c.define AS concept_define,
+	c.updated_at AS concept_updated_at 
+FROM
+	concept_stock AS s
+	INNER JOIN concept_stock_concept AS sc ON sc.stock_code = s.
+	CODE INNER JOIN concept_concept AS c ON c.id = sc.concept_id
+where c.id=?
+order by sc.updated_at`,
+		conceptId)
+	if err != nil {
+		return nil, errors.Wrap(err, db.Mysql)
+	}
+	return scs, nil
 }
 
-func (repo *StockMarketRepo) SaveRealtime() {
-	// TODO save realtime
+func (repo *StockMarketRepo) QueryRealtimeArchive(ctx context.Context, userId int, limit int) ([]model.RealtimeMessage, error) {
+	if limit < 1 || limit > 1000 {
+		limit = 1000
+	}
+	messages := make([]model.RealtimeMessage, 0)
+	err := repo.db.SelectContext(
+		ctx,
+		&messages,
+		"select * from realtime_archive where user_id=? order by seq desc limit ?",
+		userId, limit)
+	if err != nil {
+		return nil, errors.Wrap(err, db.Mysql)
+	}
+	return messages, nil
 }
 
-func (repo *StockMarketRepo) DeleteRealtime() {
-	// TODO delete realtime
+func (repo *StockMarketRepo) SaveRealtimeArchive(ctx context.Context, message *model.RealtimeMessage) (int64, error) {
+	ret, err := repo.db.NamedExecContext(
+		ctx,
+		`insert into realtime_archive 
+(user_id, id, seq, title, digest, url, app_url, share_url, stock, field, color, tag, tags, ctime, rtime, source, short, nature, import, tag_info) 
+values (:user_id, :id, :seq, :title, :digest, :url, :app_url, :share_url, :stock, :field, :color, :tag, :tags, :ctime, :rtime, :source, :short, :nature, :import, :tag_info)`,
+		message)
+	if err != nil {
+		return 0, errors.Wrap(err, db.Mysql)
+	}
+	ra, _ := ret.RowsAffected()
+	return ra, nil
+}
+
+func (repo *StockMarketRepo) DeleteRealtimeArchive(ctx context.Context, userId int, seq string) (int64, error) {
+	ret, err := repo.db.ExecContext(ctx, "delete from realtime_archive where user_id=? and seq=?", userId, seq)
+	if err != nil {
+		return 0, errors.Wrap(err, db.Mysql)
+	}
+	ra, _ := ret.RowsAffected()
+	return ra, nil
 }
 
 func (repo *StockMarketRepo) FuzzyStockKw() {

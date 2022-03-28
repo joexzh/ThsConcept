@@ -5,12 +5,15 @@ import (
 )
 
 type ConceptStock struct {
-	StockCode   string    `json:"stockCode" db:"stock_code"`
-	StockName   string    `json:"stockName" db:"stock_name"`
-	ConceptId   string    `json:"conceptId" db:"concept_id"`
-	ConceptName string    `json:"conceptName" db:"concept_name"`
-	Description string    `json:"description" db:"description"`
-	UpdatedAt   time.Time `json:"updatedAt" db:"updated_at"`
+	StockCode        string    `json:"stockCode" db:"stock_code"`
+	StockName        string    `json:"stockName" db:"stock_name"`
+	UpdatedAt        time.Time `json:"updatedAt" db:"updated_at"`
+	Description      string    `json:"description" db:"description"`
+	ConceptId        string    `json:"conceptId" db:"concept_id"`
+	ConceptName      string    `json:"conceptName" db:"concept_name"`
+	ConceptPlateId   int       `json:"conceptPlateId" db:"concept_plate_id"`
+	ConceptDefine    string    `json:"conceptDefine" db:"concept_define"`
+	ConceptUpdatedAt time.Time `json:"conceptUpdatedAt" db:"concept_updated_at"`
 }
 
 func (s *ConceptStock) CmpConcept(o *ConceptStock) bool {

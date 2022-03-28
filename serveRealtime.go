@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"github.com/joexzh/ThsConcept/repos"
 	"io"
 	"log"
 	"net/http"
@@ -59,8 +60,7 @@ func ginRealtimeApi(c *gin.Context) {
 	tag := c.Query("tag")
 	ctime, _ := strconv.ParseInt(c.Query("ctime"), 10, 64)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
+	ctx := context.Background()
 	resp, err := util.HttpGetRealTime(ctx, int(page), int(pagesize), tag, int(ctime))
 	if err != nil {
 		log.Println(err.Error())
@@ -118,28 +118,63 @@ func ginSaveRealtimeArchive(c *gin.Context) {
 		_ = c.AbortWithError(http.StatusBadRequest, err)
 		return
 	}
-	panic("not implemented")
-	// TODO gin save realtime msg
-	// c.Status(http.StatusOK)
+	// todo fake user
+	msg.UserId = 1
+
+	ctx := context.Background()
+
+	repo, err := repos.NewStockMarketRepo()
+	if err != nil {
+		log.Println(err)
+		_ = c.AbortWithError(http.StatusInternalServerError, err)
+		return
+	}
+	_, err = repo.SaveRealtimeArchive(ctx, &msg)
+	if err != nil {
+		log.Println(err)
+		_ = c.AbortWithError(http.StatusInternalServerError, err)
+		return
+	}
+
+	c.Status(http.StatusOK)
 }
 
 func ginDeleteRealtimeArchive(c *gin.Context) {
-	// userId := c.Param("userId")
-	// objId := c.Query("objId")
-	//
-	// ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	// defer cancel()
-	panic("not implemented")
-	// TODO gin delete realtime msg
-	// c.Status(http.StatusOK)
+	seq := c.Param("seq")
+	userId := 1 // todo fake user
+	ctx := context.Background()
+
+	repo, err := repos.NewStockMarketRepo()
+	if err != nil {
+		log.Println(err)
+		_ = c.AbortWithError(http.StatusInternalServerError, err)
+		return
+	}
+	_, err = repo.DeleteRealtimeArchive(ctx, userId, seq)
+	if err != nil {
+		log.Println(err)
+		_ = c.AbortWithError(http.StatusInternalServerError, err)
+		return
+	}
+	c.Status(http.StatusOK)
 }
 
-// retrieve saved message list
 func ginRealtimeArchive(c *gin.Context) {
-	// userId := c.Param("userId")
-	// ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	// defer cancel()
-	panic("not implemented")
-	// TODO gin get realtime msg
-	// c.JSON(http.StatusOK, list)
+	ctx := context.Background()
+
+	userId := 1 // todo fake user
+
+	repo, err := repos.NewStockMarketRepo()
+	if err != nil {
+		log.Println(err)
+		_ = c.AbortWithError(http.StatusInternalServerError, err)
+		return
+	}
+	list, err := repo.QueryRealtimeArchive(ctx, userId, 1000)
+	if err != nil {
+		log.Println(err)
+		_ = c.AbortWithError(http.StatusInternalServerError, err)
+		return
+	}
+	c.JSON(http.StatusOK, list)
 }

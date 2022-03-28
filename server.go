@@ -13,11 +13,13 @@ func startServer() {
 	r.Use(cors.Default())
 
 	r.GET("/api/stockconcept", ginQuerySc)
+	r.GET("/api/concept", ginQueryConcept)
+	r.GET("/api/stock/:conceptid", ginQueryStockByConceptId)
 
 	r.GET("/api/realtime", ginRealtimeApi)
 	r.GET("/api/realtime/archive", ginRealtimeArchive)
 	r.POST("/api/realtime/archive", ginSaveRealtimeArchive)
-	r.DELETE("/api/realtime/archive", ginDeleteRealtimeArchive)
+	r.DELETE("/api/realtime/archive/:seq", ginDeleteRealtimeArchive)
 
 	r.GET("/api/stock/zdt", ginLongShort)
 

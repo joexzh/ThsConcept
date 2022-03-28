@@ -50,7 +50,7 @@ func newMysqlClient(dsn string) (*sqlx.DB, error) {
 // ParamList generates sql list part, (?,?,...?), question mark is used to replace the value.
 func ParamList[T any](params ...T) (string, []interface{}) {
 	var b strings.Builder
-	var vals []interface{}
+	vals := make([]interface{}, 0, len(params))
 	b.WriteString("(")
 	for i, _ := range params {
 		b.WriteString("?")
@@ -58,6 +58,9 @@ func ParamList[T any](params ...T) (string, []interface{}) {
 			b.WriteString(",")
 		}
 		vals = append(vals, params[i])
+	}
+	if len(params) < 1 {
+		b.WriteString("null")
 	}
 	b.WriteString(")")
 	return b.String(), vals
