@@ -1,13 +1,13 @@
 package db
 
 import (
-	"github.com/jmoiron/sqlx"
-	"strings"
+	"database/sql"
 	"sync"
 	"time"
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/joexzh/ThsConcept/config"
+	"github.com/joexzh/dbh"
 )
 
 const (
@@ -16,14 +16,14 @@ const (
 )
 
 type mysqlClient struct {
-	pool *sqlx.DB
+	pool *sql.DB
 	err  error
 }
 
 var _mysqlClient *mysqlClient
 var once sync.Once
 
-func GetMysqlClient() (*sqlx.DB, error) {
+func GetMysqlClient() (*sql.DB, error) {
 	once.Do(func() {
 		db, err := newMysqlClient(config.GetEnv().MysqlConnStr)
 		_mysqlClient = &mysqlClient{
@@ -35,33 +35,24 @@ func GetMysqlClient() (*sqlx.DB, error) {
 }
 
 // newMysqlClient create mysql client, not connect yet.
-func newMysqlClient(dsn string) (*sqlx.DB, error) {
-	pool, err := sqlx.Open(Mysql, dsn)
+func newMysqlClient(dsn string) (*sql.DB, error) {
+	pool, err := sql.Open(Mysql, dsn)
 	if err != nil {
 		return nil, err
 	}
-	pool.SetConnMaxLifetime(0)
-	pool.SetConnMaxIdleTime(5 * time.Second)
+	pool.SetConnMaxLifetime(3 * time.Minute)
+	pool.SetConnMaxIdleTime(10 * time.Second)
 	pool.SetMaxOpenConns(10)
+	pool.SetMaxIdleConns(10)
 
 	return pool, nil
 }
 
-// ParamList generates sql list part, (?,?,...?), question mark is used to replace the value.
-func ParamList[T any](params ...T) (string, []interface{}) {
-	var b strings.Builder
-	vals := make([]interface{}, 0, len(params))
-	b.WriteString("(")
-	for i, _ := range params {
-		b.WriteString("?")
-		if i < len(params)-1 {
-			b.WriteString(",")
-		}
-		vals = append(vals, params[i])
+// ArgList generates sql list part, (?,?,...?), question mark is used to replace the value.
+func ArgList[T any](params ...T) (string, []interface{}) {
+	vals := make([]interface{}, len(params))
+	for i, param := range params {
+		vals[i] = param
 	}
-	if len(params) < 1 {
-		b.WriteString("null")
-	}
-	b.WriteString(")")
-	return b.String(), vals
+	return dbh.DefaultConfig.MarkInsertValueSql(len(params), 1), vals
 }

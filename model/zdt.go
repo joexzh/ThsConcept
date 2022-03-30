@@ -16,3 +16,24 @@ type ZDTHistory struct {
 	SZEvenCount     uint16    `json:"szEvenCount" db:"sz_even_count"`         // 深市平盘只数
 	SZShortCount    uint16    `json:"szShortCount" db:"sz_short_count"`       // 深市下跌只数
 }
+
+func (z *ZDTHistory) Args() []any {
+	return []any{&z.Date, &z.LongLimitCount, &z.ShortLimitCount, &z.StopTradeCount, &z.Amount,
+		&z.SHLongCount, &z.SHEvenCount, &z.SHShortCount, &z.SZLongCount, &z.SZEvenCount, &z.SZShortCount}
+}
+func (z *ZDTHistory) Columns() []string {
+	return []string{"date",
+		"long_limit_count",
+		"short_limit_count",
+		"stop_trade_count",
+		"amount",
+		"sh_long_count",
+		"sh_even_count",
+		"sh_short_count",
+		"sz_long_count",
+		"sz_even_count",
+		"sz_short_count"}
+}
+func (z *ZDTHistory) TableName() string {
+	return "long_short"
+}

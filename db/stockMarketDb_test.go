@@ -9,7 +9,7 @@ func TestParamListThreeParams(t *testing.T) {
 	expectedSql := "(?,?,?)"
 	expectedVals := []interface{}{1, 2, 3}
 
-	listSql, params := ParamList(list...)
+	listSql, params := ArgList(list...)
 
 	if listSql != expectedSql {
 		t.Errorf("Expected sql %s, got %s", expectedSql, listSql)
@@ -27,7 +27,7 @@ func TestParamListZeroParams(t *testing.T) {
 	expectedSql := "(null)"
 	expectedVals := make([]interface{}, 0)
 
-	listSql, params := ParamList(list...)
+	listSql, params := ArgList(list...)
 
 	if listSql != expectedSql {
 		t.Errorf("Expected sql %s, got %s", expectedSql, listSql)

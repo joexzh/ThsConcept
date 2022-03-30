@@ -16,6 +16,20 @@ type ConceptStock struct {
 	ConceptUpdatedAt time.Time `json:"conceptUpdatedAt" db:"concept_updated_at"`
 }
 
+func (s *ConceptStock) Args() []any {
+	return []any{
+		&s.StockCode,
+		&s.StockName,
+		&s.UpdatedAt,
+		&s.Description,
+		&s.ConceptId,
+		&s.ConceptName,
+		&s.ConceptPlateId,
+		&s.ConceptDefine,
+		&s.ConceptUpdatedAt,
+	}
+}
+
 func (s *ConceptStock) CmpConcept(o *ConceptStock) bool {
 	return s.ConceptId == o.ConceptId &&
 		s.ConceptName == o.ConceptName &&
@@ -45,6 +59,16 @@ type Concept struct {
 	UpdatedAt time.Time `json:"updatedAt" db:"updated_at"`
 
 	Stocks []*ConceptStock `json:"stocks"`
+}
+
+func (c *Concept) Args() []any {
+	return []any{&c.Id, &c.Name, &c.PlateId, &c.Define, &c.UpdatedAt}
+}
+func (c *Concept) Columns() []string {
+	return []string{"id", "name", "plate_id", "define", "updated_at"}
+}
+func (c *Concept) TableName() string {
+	return "concept_concept"
 }
 
 func (c *Concept) Cmp(o *Concept) bool {

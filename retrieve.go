@@ -130,7 +130,7 @@ func retrieveSohuZdt() {
 		log.Fatal(err)
 	}
 
-	var newList []model.ZDTHistory
+	var newList []*model.ZDTHistory
 	if len(dbList) > 0 {
 		lastDate := dbList[0].Date
 		for _, zdt := range list {

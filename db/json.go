@@ -15,7 +15,7 @@ func JsonScan[T any](dest T, src interface{}) error {
 	case nil:
 		return nil
 	default:
-		return fmt.Errorf("incompatible type for %t", dest)
+		return fmt.Errorf("incompatible type for %T", dest)
 	}
 	err := json.Unmarshal(source, &dest)
 	if err != nil {

@@ -2,10 +2,11 @@ package fetch
 
 import (
 	"context"
-	"github.com/joexzh/ThsConcept/config"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/joexzh/ThsConcept/config"
 
 	"github.com/pkg/errors"
 
@@ -17,7 +18,7 @@ import (
 const errPrefix = "sohu api"
 
 // SohuZDT 从 html 页面 https://q.stock.sohu.com/cn/zdt.shtml 获取搜狐的涨跌停历史数据
-func SohuZDT(ctx context.Context) ([]model.ZDTHistory, error) {
+func SohuZDT(ctx context.Context) ([]*model.ZDTHistory, error) {
 	resp, err := util.HttpGet(ctx, "https://q.stock.sohu.com/cn/zdt.shtml", nil, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, errPrefix)
@@ -35,10 +36,11 @@ func SohuZDT(ctx context.Context) ([]model.ZDTHistory, error) {
 	// 跳过表头, 占2个tr
 	trs := doc.Find(".data-main .data-table table tbody tr").Slice(2, goquery.ToEnd)
 	length := trs.Length()
-	list := make([]model.ZDTHistory, length, length)
+	list := make([]*model.ZDTHistory, length, length)
 	trs.Each(func(tri int, selection *goquery.Selection) {
+		list[tri] = &model.ZDTHistory{}
 		selection.Find("td").Each(func(tdi int, td *goquery.Selection) {
-			err = parseTd(tdi, td, &list[tri], now)
+			err = parseTd(tdi, td, list[tri], now)
 			if err != nil {
 				errList = append(errList, errors.Wrap(err, errPrefix))
 			}

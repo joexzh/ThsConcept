@@ -2,6 +2,7 @@ package model
 
 import (
 	"database/sql/driver"
+
 	"github.com/joexzh/ThsConcept/db"
 )
 
@@ -32,6 +33,58 @@ type RealtimeMessage struct {
 	Nature   string                `json:"nature" db:"nature"`
 	Import   string                `json:"import" db:"import"`
 	TagInfo  RealtimeTagInfos      `json:"tagInfo" db:"tag_info"`
+}
+
+func (r *RealtimeMessage) Args() []any {
+	return []any{
+		&r.UserId,
+		&r.Id,
+		&r.Seq,
+		&r.Title,
+		&r.Digest,
+		&r.Url,
+		&r.AppUrl,
+		&r.ShareUrl,
+		&r.Stock,
+		&r.Field,
+		&r.Color,
+		&r.Tag,
+		&r.Tags,
+		&r.Ctime,
+		&r.Rtime,
+		&r.Source,
+		&r.Short,
+		&r.Nature,
+		&r.Import,
+		&r.TagInfo,
+	}
+}
+func (r *RealtimeMessage) Columns() []string {
+	return []string{
+		"user_id",
+		"id",
+		"seq",
+		"title",
+		"digest",
+		"url",
+		"app_url",
+		"share_url",
+		"stock",
+		"field",
+		"color",
+		"tag",
+		"tags",
+		"ctime",
+		"rtime",
+		"source",
+		"short",
+		"nature",
+		"import",
+		"tag_info",
+	}
+}
+func (r *RealtimeMessage) TableName() string {
+	return "realtime_archive"
 }
 
 type RealtimeMessageStock struct {
