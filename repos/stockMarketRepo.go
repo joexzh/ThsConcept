@@ -11,6 +11,7 @@ import (
 
 	"github.com/joexzh/ThsConcept/db"
 	"github.com/joexzh/ThsConcept/model"
+	"github.com/joexzh/ThsConcept/tmpl"
 	"github.com/pkg/errors"
 )
 
@@ -28,7 +29,7 @@ func (repo *StockMarketRepo) ZdtListDesc(ctx context.Context, start time.Time, l
 		limit = 1000
 	}
 	list, err := dbh.QueryContext[*model.ZDTHistory](repo.DB, ctx,
-		"SELECT * FROM long_short WHERE date >= ? ORDER BY date DESC LIMIT ?",
+		tmpl.SelectZdt,
 		start, limit)
 	if err != nil {
 		return nil, errors.Wrap(err, repo.Name)
@@ -118,21 +119,7 @@ func (repo *StockMarketRepo) UpdateConcept(ctx context.Context, newcs ...*model.
 	defer tx.Rollback()
 
 	// query old concepts and stocks from db for update
-	oldscs, err := dbh.QueryContext[*model.ConceptStock](repo.DB, ctx, `SELECT
-	s.CODE AS stock_code,
-	s.NAME AS stock_name,
-	sc.updated_at,
-	sc.description,
-	c.id AS concept_id,
-	c.NAME AS concept_name,
-	c.plate_id AS concept_plate_id,
-	c.define AS concept_define,
-	c.updated_at AS concept_updated_at 
-FROM
-	concept_stock AS s
-	INNER JOIN concept_stock_concept AS sc ON sc.stock_code = s.
-	CODE INNER JOIN concept_concept AS c ON c.id = sc.concept_id
-for update`)
+	oldscs, err := dbh.QueryContext[*model.ConceptStock](repo.DB, ctx, tmpl.SelectAllSc)
 	if err != nil {
 		return result, errors.Wrap(err, repo.Name)
 	}
@@ -177,16 +164,16 @@ for update`)
 	result.ConceptStockDeleted = ra
 
 	// 3. update concept_stock
-	updateStockStmt, err := tx.Prepare("UPDATE concept_stock SET name = ? WHERE code = ?")
+	updateStockStmt, err := tx.Prepare(tmpl.UpdateConceptStock)
 	if err != nil {
 		return result, errors.Wrap(err, repo.Name)
 	}
-	insertStockStmt, err := tx.Prepare("insert INTO concept_stock VALUES (?,?)")
+	insertStockStmt, err := tx.Prepare(tmpl.InsertConceptStock)
 	if err != nil {
 		return result, errors.Wrap(err, repo.Name)
 	}
 	distinctOldStocks := make(map[string]*model.ConceptStock)
-	rows, err := tx.QueryContext(ctx, "SELECT * FROM concept_stock")
+	rows, err := tx.QueryContext(ctx, tmpl.SelectAllConceptStock)
 	if err != nil {
 		return result, errors.Wrap(err, repo.Name)
 	}
@@ -220,19 +207,19 @@ for update`)
 		}
 	}
 
-	insertConceptStmt, err := tx.Prepare("insert INTO concept_concept VALUES (?,?,?,?,?)")
+	insertConceptStmt, err := tx.Prepare(tmpl.InsertConcept)
 	if err != nil {
 		return result, errors.Wrap(err, repo.Name)
 	}
-	updateConceptStmt, err := tx.Prepare("UPDATE concept_concept SET name = ?, plate_id = ?, define = ?, updated_at = ? WHERE id = ?")
+	updateConceptStmt, err := tx.Prepare(tmpl.UpdateConcept)
 	if err != nil {
 		return result, errors.Wrap(err, repo.Name)
 	}
-	insertScStmt, err := tx.Prepare("insert INTO concept_stock_concept VALUES (?,?,?,?)")
+	insertScStmt, err := tx.Prepare(tmpl.InsertConceptStockConcept)
 	if err != nil {
 		return result, errors.Wrap(err, repo.Name)
 	}
-	updateScStmt, err := tx.Prepare("UPDATE concept_stock_concept SET description = ?, updated_at = ? WHERE stock_code = ? AND concept_id = ?")
+	updateScStmt, err := tx.Prepare(tmpl.UpdateConceptStockConcept)
 	if err != nil {
 		return result, errors.Wrap(err, repo.Name)
 	}
@@ -314,29 +301,7 @@ func (repo *StockMarketRepo) QueryConceptStock(ctx context.Context, stockKw stri
 	if limit < 1 || limit > 1000 {
 		limit = 1000
 	}
-	const scSql = `SELECT
-	s.CODE AS stock_code,
-	s.NAME AS stock_name,
-	sc.updated_at,
-	sc.description,
-	c.id AS concept_id,
-	c.NAME AS concept_name,
-	c.plate_id AS concept_plate_id,
-	c.define AS concept_define,
-	c.updated_at AS concept_updated_at 
-FROM
-	concept_stock AS s
-	INNER JOIN concept_stock_concept AS sc ON sc.stock_code = s.
-	CODE INNER JOIN concept_concept AS c ON c.id = sc.concept_id
-WHERE
-	(
-		s.CODE = IFNULL(?, s.code)
-		OR s.NAME = IFNULL(?, s.name)
-	) 
-	and c.NAME = IFNULL(?, c.name) 
-ORDER BY
-	sc.updated_at DESC 
-	LIMIT ?`
+	const scSql = tmpl.SelectScByName
 	vals := make([]interface{}, 4)
 	if stockKw == "" {
 		vals[0] = nil
@@ -369,7 +334,7 @@ func (repo *StockMarketRepo) QueryConcepts(ctx context.Context, conceptKw string
 		conceptVal = conceptKw
 	}
 	concepts, err := dbh.QueryContext[*model.Concept](repo.DB, ctx,
-		"select * from concept_concept where name=IFNULL(?, name) order by updated_at desc limit ?",
+		tmpl.SelectConceptByName,
 		conceptVal, limit)
 	if err != nil {
 		return nil, errors.Wrap(err, repo.Name)
@@ -378,22 +343,7 @@ func (repo *StockMarketRepo) QueryConcepts(ctx context.Context, conceptKw string
 }
 
 func (repo *StockMarketRepo) QueryStockByConceptId(ctx context.Context, conceptId string) ([]*model.ConceptStock, error) {
-	scs, err := dbh.QueryContext[*model.ConceptStock](repo.DB, ctx, `SELECT
-	s.CODE AS stock_code,
-	s.NAME AS stock_name,
-	sc.updated_at,
-	sc.description,
-	c.id AS concept_id,
-	c.NAME AS concept_name,
-	c.plate_id AS concept_plate_id,
-	c.define AS concept_define,
-	c.updated_at AS concept_updated_at 
-FROM
-	concept_stock AS s
-	INNER JOIN concept_stock_concept AS sc ON sc.stock_code = s.
-	CODE INNER JOIN concept_concept AS c ON c.id = sc.concept_id
-where c.id=?
-order by sc.updated_at`, conceptId)
+	scs, err := dbh.QueryContext[*model.ConceptStock](repo.DB, ctx, tmpl.SelectScByConceptId, conceptId)
 	if err != nil {
 		return nil, errors.Wrap(err, repo.Name)
 	}
@@ -405,7 +355,7 @@ func (repo *StockMarketRepo) QueryRealtimeArchive(ctx context.Context, userId in
 		limit = 1000
 	}
 	messages, err := dbh.QueryContext[*model.RealtimeMessage](repo.DB, ctx,
-		"select * from realtime_archive where user_id=? order by seq desc limit ?",
+		tmpl.SelectRealtimeByUserId,
 		userId, limit)
 	if err != nil {
 		return nil, errors.Wrap(err, repo.Name)
@@ -418,7 +368,7 @@ func (repo *StockMarketRepo) SaveRealtimeArchive(ctx context.Context, message *m
 }
 
 func (repo *StockMarketRepo) DeleteRealtimeArchive(ctx context.Context, userId int, seq string) (int64, error) {
-	ret, err := repo.DB.ExecContext(ctx, "delete from realtime_archive where user_id=? and seq=?", userId, seq)
+	ret, err := repo.DB.ExecContext(ctx, tmpl.DeleteRealtimeByUserIdSeq, userId, seq)
 	if err != nil {
 		return 0, errors.Wrap(err, repo.Name)
 	}
