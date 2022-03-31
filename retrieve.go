@@ -100,7 +100,7 @@ func retrieveConcept() {
 	}
 	log.Println("concept: retrieve done")
 
-	repo, err := repos.NewStockMarketRepo()
+	repo, err := repos.InitStockMarketRepo()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -120,7 +120,7 @@ func retrieveSohuZdt() {
 		return
 	}
 
-	repo, err := repos.NewStockMarketRepo()
+	repo, err := repos.InitStockMarketRepo()
 	if err != nil {
 		log.Fatal(err)
 	}

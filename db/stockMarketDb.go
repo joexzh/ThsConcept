@@ -2,6 +2,7 @@ package db
 
 import (
 	"database/sql"
+	"log"
 	"sync"
 	"time"
 
@@ -10,42 +11,49 @@ import (
 	"github.com/joexzh/dbh"
 )
 
-const (
-	Mysql = "mysql"
-	Limit = 10000
+type DBConfig struct {
+	Driver       string
+	DSN          string
+	MaxLifetime  time.Duration
+	MaxIdletime  time.Duration
+	MaxOpenConns int
+	MaxIdleConns int
+}
+
+func NewMysqlConfig() *DBConfig {
+	return &DBConfig{
+		Driver:       "mysql",
+		DSN:          config.GetEnv().MysqlConnStr,
+		MaxLifetime:  3 * time.Minute,
+		MaxIdletime:  10 * time.Second,
+		MaxOpenConns: 10,
+		MaxIdleConns: 10,
+	}
+}
+
+var (
+	_db        *sql.DB
+	_err       error
+	_newDbOnce sync.Once
 )
 
-type mysqlClient struct {
-	pool *sql.DB
-	err  error
-}
-
-var _mysqlClient *mysqlClient
-var once sync.Once
-
-func GetMysqlClient() (*sql.DB, error) {
-	once.Do(func() {
-		db, err := newMysqlClient(config.GetEnv().MysqlConnStr)
-		_mysqlClient = &mysqlClient{
-			pool: db,
-			err:  err,
+func NewDB(config *DBConfig) (*sql.DB, error) {
+	_newDbOnce.Do(func() {
+		db, err := sql.Open(config.Driver, config.DSN)
+		if err != nil {
+			_err = err
+			return
 		}
+		if err = db.Ping(); err != nil {
+			log.Fatal(err)
+		}
+		db.SetConnMaxLifetime(config.MaxLifetime)
+		db.SetConnMaxIdleTime(config.MaxIdletime)
+		db.SetMaxOpenConns(config.MaxOpenConns)
+		db.SetMaxIdleConns(config.MaxIdleConns)
+		_db = db
 	})
-	return _mysqlClient.pool, _mysqlClient.err
-}
-
-// newMysqlClient create mysql client, not connect yet.
-func newMysqlClient(dsn string) (*sql.DB, error) {
-	pool, err := sql.Open(Mysql, dsn)
-	if err != nil {
-		return nil, err
-	}
-	pool.SetConnMaxLifetime(3 * time.Minute)
-	pool.SetConnMaxIdleTime(10 * time.Second)
-	pool.SetMaxOpenConns(10)
-	pool.SetMaxIdleConns(10)
-
-	return pool, nil
+	return _db, _err
 }
 
 // ArgList generates sql list part, (?,?,...?), question mark is used to replace the value.

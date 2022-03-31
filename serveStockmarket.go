@@ -11,7 +11,7 @@ import (
 )
 
 func ginLongShort(c *gin.Context) {
-	repo, err := repos.NewStockMarketRepo()
+	repo, err := repos.InitStockMarketRepo()
 	if err != nil {
 		log.Println(err)
 		c.AbortWithError(http.StatusInternalServerError, err)

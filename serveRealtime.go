@@ -3,13 +3,14 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"github.com/joexzh/ThsConcept/repos"
 	"io"
 	"log"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/joexzh/ThsConcept/repos"
 
 	"github.com/gin-gonic/gin"
 	"github.com/joexzh/ThsConcept/dto"
@@ -123,7 +124,7 @@ func ginSaveRealtimeArchive(c *gin.Context) {
 
 	ctx := context.Background()
 
-	repo, err := repos.NewStockMarketRepo()
+	repo, err := repos.InitStockMarketRepo()
 	if err != nil {
 		log.Println(err)
 		_ = c.AbortWithError(http.StatusInternalServerError, err)
@@ -144,7 +145,7 @@ func ginDeleteRealtimeArchive(c *gin.Context) {
 	userId := 1 // todo fake user
 	ctx := context.Background()
 
-	repo, err := repos.NewStockMarketRepo()
+	repo, err := repos.InitStockMarketRepo()
 	if err != nil {
 		log.Println(err)
 		_ = c.AbortWithError(http.StatusInternalServerError, err)
@@ -164,7 +165,7 @@ func ginRealtimeArchive(c *gin.Context) {
 
 	userId := 1 // todo fake user
 
-	repo, err := repos.NewStockMarketRepo()
+	repo, err := repos.InitStockMarketRepo()
 	if err != nil {
 		log.Println(err)
 		_ = c.AbortWithError(http.StatusInternalServerError, err)

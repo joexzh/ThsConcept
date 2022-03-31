@@ -24,10 +24,4 @@ func main() {
 	default:
 		log.Fatal("wrong mode")
 	}
-
-	defer func() {
-		if err := recover(); err != nil {
-			log.Fatal(err)
-		}
-	}()
 }

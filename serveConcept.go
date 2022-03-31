@@ -2,11 +2,12 @@ package main
 
 import (
 	"context"
+	"net/http"
+	"strconv"
+
 	"github.com/gin-gonic/gin"
 	"github.com/joexzh/ThsConcept/joexzherror"
 	"github.com/joexzh/ThsConcept/repos"
-	"net/http"
-	"strconv"
 )
 
 func ginQuerySc(c *gin.Context) {
@@ -16,7 +17,7 @@ func ginQuerySc(c *gin.Context) {
 
 	ctx := context.Background()
 
-	repo, err := repos.NewStockMarketRepo()
+	repo, err := repos.InitStockMarketRepo()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, wrapResult(errCode(err), err.Error(), nil))
 		return
@@ -35,7 +36,7 @@ func ginQueryConcept(c *gin.Context) {
 
 	ctx := context.Background()
 
-	repo, err := repos.NewStockMarketRepo()
+	repo, err := repos.InitStockMarketRepo()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, wrapResult(errCode(err), err.Error(), nil))
 		return
@@ -53,7 +54,7 @@ func ginQueryStockByConceptId(c *gin.Context) {
 
 	ctx := context.Background()
 
-	repo, err := repos.NewStockMarketRepo()
+	repo, err := repos.InitStockMarketRepo()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, wrapResult(errCode(err), err.Error(), nil))
 		return
