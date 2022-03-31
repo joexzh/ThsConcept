@@ -9,12 +9,12 @@ import (
 )
 
 type DBConfig struct {
-	Driver       string
-	DSN          string
-	MaxLifetime  time.Duration
-	MaxIdletime  time.Duration
 	MaxOpenConns int
 	MaxIdleConns int
+	MaxLifetime  time.Duration
+	MaxIdletime  time.Duration
+	Driver       string
+	DSN          string
 }
 
 var (
