@@ -60,6 +60,8 @@ func init() {
 
 func GetEnv() *Env {
 	once.Do(func() {
+		env.ServerPort = os.Getenv("SERVER_PORT")
+
 		if os.Getenv("mysql_user") == "" {
 			panic("mysql_user is not set")
 		}

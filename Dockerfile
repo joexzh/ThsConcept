@@ -5,9 +5,9 @@ ENV GO111MODULE=on GOPROXY="https://goproxy.cn"
 COPY go.mod go.sum ./
 RUN go mod download -x
 COPY . .
-RUN go install -ldflags '-s -w'
+RUN go build -ldflags '-s -w'
 
 FROM alpine:3.15
 RUN apk add --no-cache iptables
-COPY --from=builder /go/bin /bin
+COPY --from=builder /app /bin
 EXPOSE 8088
