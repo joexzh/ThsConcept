@@ -295,29 +295,67 @@ func (repo *StockMarketRepo) UpdateConcept(ctx context.Context, newcs ...*model.
 	return result, nil
 }
 
-func (repo *StockMarketRepo) QueryConceptStock(ctx context.Context, stockKw string, conceptKw string, limit int) (
+func (repo *StockMarketRepo) QueryScByKw(ctx context.Context, stockKw string, conceptKw string, limit int) (
+	[]*model.ConceptStock, error) {
+
+	switch {
+	case stockKw != "" && conceptKw != "":
+		return repo.QueryScByStockConceptKw(ctx, stockKw, conceptKw, limit)
+	case stockKw != "":
+		return repo.QeuryScByStockKw(ctx, stockKw, limit)
+	case conceptKw != "":
+		return repo.QueryScByConceptKw(ctx, conceptKw, limit)
+	default:
+		return repo.QueryScByUpdatedDesc(ctx, limit)
+	}
+}
+
+func (repo *StockMarketRepo) QueryScByStockConceptKw(ctx context.Context, stockKw string, conceptKw string, limit int) (
 	[]*model.ConceptStock, error) {
 
 	if limit < 1 || limit > 1000 {
 		limit = 1000
 	}
-	vals := make([]interface{}, 4)
-	if stockKw == "" {
-		vals[0] = nil
-		vals[1] = nil
-	} else {
-		vals[0] = stockKw
-		vals[1] = stockKw
-	}
-	if conceptKw == "" {
-		vals[2] = nil
-	} else {
-		vals[2] = conceptKw
-	}
-	vals[3] = limit
-
 	scs := make([]*model.ConceptStock, 0)
-	scs, err := dbh.QueryContext[*model.ConceptStock](repo.DB, ctx, tmpl.SelectScByStockOrConceptName, vals...)
+	scs, err := dbh.QueryContext[*model.ConceptStock](repo.DB, ctx, tmpl.SelectScByStockConceptKw,
+		stockKw, conceptKw, conceptKw, conceptKw, conceptKw, limit)
+	if err != nil {
+		return nil, errors.Wrap(err, repo.Name)
+	}
+	return scs, nil
+}
+
+func (repo *StockMarketRepo) QeuryScByStockKw(ctx context.Context, stockKw string, limit int) ([]*model.ConceptStock, error) {
+	if limit < 1 || limit > 1000 {
+		limit = 1000
+	}
+	scs := make([]*model.ConceptStock, 0)
+	scs, err := dbh.QueryContext[*model.ConceptStock](repo.DB, ctx, tmpl.SelectScByStockKw, stockKw, limit)
+	if err != nil {
+		return nil, errors.Wrap(err, repo.Name)
+	}
+	return scs, nil
+}
+
+func (repo *StockMarketRepo) QueryScByConceptKw(ctx context.Context, conceptKw string, limit int) ([]*model.ConceptStock, error) {
+	if limit < 1 || limit > 1000 {
+		limit = 1000
+	}
+	scs := make([]*model.ConceptStock, 0)
+	scs, err := dbh.QueryContext[*model.ConceptStock](repo.DB, ctx, tmpl.SelectScByConceptKw,
+		conceptKw, conceptKw, conceptKw, conceptKw, limit)
+	if err != nil {
+		return nil, errors.Wrap(err, repo.Name)
+	}
+	return scs, nil
+}
+
+func (repo *StockMarketRepo) QueryScByUpdatedDesc(ctx context.Context, limit int) ([]*model.ConceptStock, error) {
+	if limit < 1 || limit > 1000 {
+		limit = 1000
+	}
+	scs := make([]*model.ConceptStock, 0)
+	scs, err := dbh.QueryContext[*model.ConceptStock](repo.DB, ctx, tmpl.SelectScByUpdateAtDesc, limit)
 	if err != nil {
 		return nil, errors.Wrap(err, repo.Name)
 	}
@@ -373,12 +411,4 @@ func (repo *StockMarketRepo) DeleteRealtimeArchive(ctx context.Context, userId i
 	}
 	ra, _ := ret.RowsAffected()
 	return ra, nil
-}
-
-func (repo *StockMarketRepo) FuzzyStockKw() {
-	// TODO fuzzy stock key word
-}
-
-func (repo *StockMarketRepo) FuzzyConceptKw() {
-	// TODO fuzzy concept key word
 }

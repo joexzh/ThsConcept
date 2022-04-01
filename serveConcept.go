@@ -22,7 +22,7 @@ func ginQuerySc(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, wrapResult(errCode(err), err.Error(), nil))
 		return
 	}
-	scs, err := repo.QueryConceptStock(ctx, stock, concept, int(limit))
+	scs, err := repo.QueryScByKw(ctx, stock, concept, int(limit))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, wrapResult(errCode(err), err.Error(), nil))
 		return
