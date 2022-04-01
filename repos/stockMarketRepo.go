@@ -301,7 +301,6 @@ func (repo *StockMarketRepo) QueryConceptStock(ctx context.Context, stockKw stri
 	if limit < 1 || limit > 1000 {
 		limit = 1000
 	}
-	const scSql = tmpl.SelectScByName
 	vals := make([]interface{}, 4)
 	if stockKw == "" {
 		vals[0] = nil
@@ -318,7 +317,7 @@ func (repo *StockMarketRepo) QueryConceptStock(ctx context.Context, stockKw stri
 	vals[3] = limit
 
 	scs := make([]*model.ConceptStock, 0)
-	scs, err := dbh.QueryContext[*model.ConceptStock](repo.DB, ctx, scSql, vals...)
+	scs, err := dbh.QueryContext[*model.ConceptStock](repo.DB, ctx, tmpl.SelectScByStockOrConceptName, vals...)
 	if err != nil {
 		return nil, errors.Wrap(err, repo.Name)
 	}

@@ -24,7 +24,7 @@ INNER JOIN concept_stock_concept AS sc ON sc.stock_code = s.
 CODE INNER JOIN concept_concept AS c ON c.id = sc.concept_id
 for update`
 
-const SelectScByName = `SELECT
+const SelectScByStockOrConceptName = `SELECT
 s.CODE AS stock_code,
 s.NAME AS stock_name,
 sc.updated_at,
