@@ -2,6 +2,8 @@ package model
 
 import (
 	"time"
+
+	"github.com/joexzh/dbh"
 )
 
 type ConceptStock struct {
@@ -69,6 +71,9 @@ func (c *Concept) Columns() []string {
 }
 func (c *Concept) TableName() string {
 	return "concept_concept"
+}
+func (c *Concept) Config() *dbh.Config {
+	return dbh.DefaultConfig
 }
 
 func (c *Concept) Cmp(o *Concept) bool {

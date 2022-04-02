@@ -28,8 +28,8 @@ func (repo *StockMarketRepo) ZdtListDesc(ctx context.Context, start time.Time, l
 	if limit < 1 || limit > 1000 {
 		limit = 1000
 	}
-	list, err := dbh.QueryContext[*model.ZDTHistory](repo.DB, ctx,
-		tmpl.SelectZdt,
+	list, err := dbh.QueryContext(repo.DB, ctx, tmpl.SelectZdt,
+		func() *model.ZDTHistory { return new(model.ZDTHistory) },
 		start, limit)
 	if err != nil {
 		return nil, errors.Wrap(err, repo.Name)
@@ -119,7 +119,8 @@ func (repo *StockMarketRepo) UpdateConcept(ctx context.Context, newcs ...*model.
 	defer tx.Rollback()
 
 	// query old concepts and stocks from db for update
-	oldscs, err := dbh.QueryContext[*model.ConceptStock](repo.DB, ctx, tmpl.SelectAllSc)
+	oldscs, err := dbh.QueryContext(repo.DB, ctx, tmpl.SelectAllSc,
+		func() *model.ConceptStock { return new(model.ConceptStock) })
 	if err != nil {
 		return result, errors.Wrap(err, repo.Name)
 	}
@@ -317,7 +318,10 @@ func (repo *StockMarketRepo) QueryScByStockConceptKw(ctx context.Context, stockK
 		limit = 1000
 	}
 	scs := make([]*model.ConceptStock, 0)
-	scs, err := dbh.QueryContext[*model.ConceptStock](repo.DB, ctx, tmpl.SelectScByStockConceptKw,
+	scs, err := dbh.QueryContext(repo.DB, ctx, tmpl.SelectScByStockConceptKw,
+		func() *model.ConceptStock {
+			return new(model.ConceptStock)
+		},
 		stockKw, conceptKw, conceptKw, conceptKw, conceptKw, limit)
 	if err != nil {
 		return nil, errors.Wrap(err, repo.Name)
@@ -330,7 +334,11 @@ func (repo *StockMarketRepo) QeuryScByStockKw(ctx context.Context, stockKw strin
 		limit = 1000
 	}
 	scs := make([]*model.ConceptStock, 0)
-	scs, err := dbh.QueryContext[*model.ConceptStock](repo.DB, ctx, tmpl.SelectScByStockKw, stockKw, limit)
+	scs, err := dbh.QueryContext(repo.DB, ctx, tmpl.SelectScByStockKw,
+		func() *model.ConceptStock {
+			return new(model.ConceptStock)
+		},
+		stockKw, limit)
 	if err != nil {
 		return nil, errors.Wrap(err, repo.Name)
 	}
@@ -342,7 +350,10 @@ func (repo *StockMarketRepo) QueryScByConceptKw(ctx context.Context, conceptKw s
 		limit = 1000
 	}
 	scs := make([]*model.ConceptStock, 0)
-	scs, err := dbh.QueryContext[*model.ConceptStock](repo.DB, ctx, tmpl.SelectScByConceptKw,
+	scs, err := dbh.QueryContext(repo.DB, ctx, tmpl.SelectScByConceptKw,
+		func() *model.ConceptStock {
+			return new(model.ConceptStock)
+		},
 		conceptKw, conceptKw, conceptKw, conceptKw, limit)
 	if err != nil {
 		return nil, errors.Wrap(err, repo.Name)
@@ -355,7 +366,11 @@ func (repo *StockMarketRepo) QueryScByUpdatedDesc(ctx context.Context, limit int
 		limit = 1000
 	}
 	scs := make([]*model.ConceptStock, 0)
-	scs, err := dbh.QueryContext[*model.ConceptStock](repo.DB, ctx, tmpl.SelectScByUpdateAtDesc, limit)
+	scs, err := dbh.QueryContext(repo.DB, ctx, tmpl.SelectScByUpdateAtDesc,
+		func() *model.ConceptStock {
+			return new(model.ConceptStock)
+		},
+		limit)
 	if err != nil {
 		return nil, errors.Wrap(err, repo.Name)
 	}
@@ -370,8 +385,11 @@ func (repo *StockMarketRepo) QueryConcepts(ctx context.Context, conceptKw string
 	if conceptKw != "" {
 		conceptVal = conceptKw
 	}
-	concepts, err := dbh.QueryContext[*model.Concept](repo.DB, ctx,
+	concepts, err := dbh.QueryContext(repo.DB, ctx,
 		tmpl.SelectConceptByName,
+		func() *model.Concept {
+			return new(model.Concept)
+		},
 		conceptVal, limit)
 	if err != nil {
 		return nil, errors.Wrap(err, repo.Name)
@@ -380,7 +398,11 @@ func (repo *StockMarketRepo) QueryConcepts(ctx context.Context, conceptKw string
 }
 
 func (repo *StockMarketRepo) QueryStockByConceptId(ctx context.Context, conceptId string) ([]*model.ConceptStock, error) {
-	scs, err := dbh.QueryContext[*model.ConceptStock](repo.DB, ctx, tmpl.SelectScByConceptId, conceptId)
+	scs, err := dbh.QueryContext(repo.DB, ctx, tmpl.SelectScByConceptId,
+		func() *model.ConceptStock {
+			return new(model.ConceptStock)
+		},
+		conceptId)
 	if err != nil {
 		return nil, errors.Wrap(err, repo.Name)
 	}
@@ -391,8 +413,11 @@ func (repo *StockMarketRepo) QueryRealtimeArchive(ctx context.Context, userId in
 	if limit < 1 || limit > 1000 {
 		limit = 1000
 	}
-	messages, err := dbh.QueryContext[*model.RealtimeMessage](repo.DB, ctx,
+	messages, err := dbh.QueryContext(repo.DB, ctx,
 		tmpl.SelectRealtimeByUserId,
+		func() *model.RealtimeMessage {
+			return new(model.RealtimeMessage)
+		},
 		userId, limit)
 	if err != nil {
 		return nil, errors.Wrap(err, repo.Name)

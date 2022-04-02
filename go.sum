@@ -42,8 +42,8 @@ github.com/google/gofuzz v1.0.0/go.mod h1:dBl0BpW6vV/+mYPU4Po3pmUjxk6FQPldtuIdl/
 github.com/google/subcommands v1.0.1/go.mod h1:ZjhPrFU+Olkh9WazFPsl27BQ4UPiG37m3yTrtFlrHVk=
 github.com/google/wire v0.5.0 h1:I7ELFeVBr3yfPIcc8+MWvrjk+3VjbcSzoXm3JVa+jD8=
 github.com/google/wire v0.5.0/go.mod h1:ngWDr9Qvq3yZA10YrxfyGELY/AFWGVpy9c1LTRi1EoU=
-github.com/joexzh/dbh v0.0.0-20220330172844-389262949524 h1:Auq+oJWC2wz+/8NNP7STatChhOx17oJVL+1Hx6iXvDY=
-github.com/joexzh/dbh v0.0.0-20220330172844-389262949524/go.mod h1:c/6pqY3osA6BcZu90tB/WNK1ZdVHgz7dtY5LtnxedUo=
+github.com/joexzh/dbh v0.0.0-20220402201146-50b73780f45b h1:T8p+ftqTTODbs4IkP9T7jLOtRvmKJy07DkxaDSm3D3o=
+github.com/joexzh/dbh v0.0.0-20220402201146-50b73780f45b/go.mod h1:c/6pqY3osA6BcZu90tB/WNK1ZdVHgz7dtY5LtnxedUo=
 github.com/json-iterator/go v1.1.7/go.mod h1:KdQUCv79m/52Kvf8AW2vK1V8akMuk1QjK/uOdHXbAo4=
 github.com/json-iterator/go v1.1.9/go.mod h1:KdQUCv79m/52Kvf8AW2vK1V8akMuk1QjK/uOdHXbAo4=
 github.com/json-iterator/go v1.1.12 h1:PV8peI4a0ysnczrg+LtxykD8LfKY9ML6u2jnxaEnrnM=

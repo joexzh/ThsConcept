@@ -1,6 +1,10 @@
 package model
 
-import "time"
+import (
+	"time"
+
+	"github.com/joexzh/dbh"
+)
 
 // ZDTHistory 涨跌停历史
 type ZDTHistory struct {
@@ -36,4 +40,7 @@ func (z *ZDTHistory) Columns() []string {
 }
 func (z *ZDTHistory) TableName() string {
 	return "long_short"
+}
+func (z *ZDTHistory) Config() *dbh.Config {
+	return dbh.DefaultConfig
 }

@@ -4,6 +4,7 @@ import (
 	"database/sql/driver"
 
 	"github.com/joexzh/ThsConcept/db"
+	"github.com/joexzh/dbh"
 )
 
 type RealtimeData struct {
@@ -85,6 +86,9 @@ func (r *RealtimeMessage) Columns() []string {
 }
 func (r *RealtimeMessage) TableName() string {
 	return "realtime_archive"
+}
+func (r *RealtimeMessage) Config() *dbh.Config {
+	return dbh.DefaultConfig
 }
 
 type RealtimeMessageStock struct {
