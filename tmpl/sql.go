@@ -35,12 +35,14 @@ WHERE
 		MATCH ( c.NAME, c.define ) against ( ? ) 
 	OR MATCH ( s.description ) against ( ? )) 
 ORDER BY
-	(MATCH ( s.description ) against ( ? ) + MATCH ( c.NAME, c.define ) against ( ? )) DESC
+	(MATCH ( s.description ) against ( ? ) + MATCH ( c.NAME, c.define ) against ( ? )) DESC,
+	s.updated_at desc
 LIMIT ?`
 
 const SelectConceptStockViewByStockKw = SelectConceptStockViewBody + SelectConceptStockViewFrom + `
 WHERE MATCH ( s.stock_code, s.stock_name ) against ( ? )
-order by MATCH ( s.stock_code, s.stock_name ) against ( ? ) desc
+order by MATCH ( s.stock_code, s.stock_name ) against ( ? ) desc,
+s.updated_at desc
 LIMIT ?`
 
 const SelectConceptStockViewByConceptKw = SelectConceptStockViewBody + SelectConceptStockViewFrom + `
@@ -49,7 +51,8 @@ where
 	OR MATCH ( s.description ) against ( ? )
 	ORDER BY
 	MATCH ( s.description ) against ( ? ) DESC,
-	MATCH ( c.NAME, c.define ) against ( ? )
+	MATCH ( c.NAME, c.define ) against ( ? ) desc, 
+	s.updated_at desc
 LIMIT ?`
 
 const SelectConceptStockViewByUpdateAtDesc = SelectConceptStockViewBody + SelectConceptStockViewFrom + " order by s.updated_at desc limit ?"
