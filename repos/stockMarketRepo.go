@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/joexzh/dbh"
@@ -71,7 +70,7 @@ func (repo *StockMarketRepo) InsertZdtList(ctx context.Context, list []*model.ZD
 	return total, nil
 }
 
-func scsToConceptMap(scs []*model.ConceptStock) map[string]*model.Concept {
+func scsToConceptMap(scs []*model.ConceptStockView) map[string]*model.Concept {
 	conceptMap := make(map[string]*model.Concept)
 	for _, sc := range scs {
 		concept, ok := conceptMap[sc.ConceptId]
@@ -86,21 +85,25 @@ func scsToConceptMap(scs []*model.ConceptStock) map[string]*model.Concept {
 			}
 			conceptMap[sc.ConceptId] = concept
 		}
-		concept.Stocks = append(concept.Stocks, sc)
+		stock := &model.ConceptStock{
+			StockCode:   sc.StockCode,
+			StockName:   sc.StockName,
+			Description: sc.Description,
+			UpdatedAt:   sc.UpdatedAt,
+			ConceptId:   sc.ConceptId,
+		}
+		concept.Stocks = append(concept.Stocks, stock)
 	}
 	return conceptMap
 }
 
 type UpdateConceptResult struct {
-	ConceptConceptInserted      int64
-	ConceptConceptUpdated       int64
-	ConceptConceptDeleted       int64
-	ConceptStockInserted        int64
-	ConceptStockUpdated         int64
-	ConceptStockDeleted         int64
-	ConceptStockConceptInserted int64
-	ConceptStockConceptUpdated  int64
-	ConceptStockConceptDeleted  int64
+	ConceptConceptInserted int64
+	ConceptConceptUpdated  int64
+	ConceptConceptDeleted  int64
+	ConceptStockInserted   int64
+	ConceptStockUpdated    int64
+	ConceptStockDeleted    int64
 }
 
 func (repo *StockMarketRepo) UpdateConcept(ctx context.Context, newcs ...*model.Concept) (UpdateConceptResult, error) {
@@ -118,7 +121,7 @@ func (repo *StockMarketRepo) UpdateConcept(ctx context.Context, newcs ...*model.
 	defer tx.Rollback()
 
 	// query old concepts and stocks from db for update
-	oldscs, err := dbh.QueryContext[*model.ConceptStock](repo.DB, ctx, tmpl.SelectAllSc)
+	oldscs, err := dbh.QueryContext[*model.ConceptStockView](repo.DB, ctx, tmpl.SelectAllConceptStockView+" for update")
 	if err != nil {
 		return result, errors.Wrap(err, repo.Name)
 	}
@@ -137,75 +140,6 @@ func (repo *StockMarketRepo) UpdateConcept(ctx context.Context, newcs ...*model.
 	ra, _ := ret.RowsAffected()
 	result.ConceptConceptDeleted = ra
 
-	// 2. delete un-exist stocks
-	var distinctCodes []string
-	distinctNewStocks := make(map[string]*model.ConceptStock)
-	for _, newc := range newcs {
-		for _, newstock := range newc.Stocks {
-			stock, ok := distinctNewStocks[newstock.StockCode]
-			if !ok {
-				distinctNewStocks[newstock.StockCode] = newstock
-				distinctCodes = append(distinctCodes, newstock.StockCode)
-			} else {
-				// new stock name may be empty, double check it
-				if stock.StockName == "" {
-					distinctNewStocks[newstock.StockCode] = newstock
-				}
-			}
-		}
-	}
-	listSql, vals = db.ArgList(distinctCodes...)
-	ret, err = tx.Exec("DELETE FROM concept_stock WHERE code NOT IN "+listSql, vals...)
-	if err != nil {
-		return result, errors.Wrap(err, repo.Name)
-	}
-	ra, _ = ret.RowsAffected()
-	result.ConceptStockDeleted = ra
-
-	// 3. update concept_stock
-	updateStockStmt, err := tx.Prepare(tmpl.UpdateConceptStock)
-	if err != nil {
-		return result, errors.Wrap(err, repo.Name)
-	}
-	insertStockStmt, err := tx.Prepare(tmpl.InsertConceptStock)
-	if err != nil {
-		return result, errors.Wrap(err, repo.Name)
-	}
-	distinctOldStocks := make(map[string]*model.ConceptStock)
-	rows, err := tx.QueryContext(ctx, tmpl.SelectAllConceptStock)
-	if err != nil {
-		return result, errors.Wrap(err, repo.Name)
-	}
-	for rows.Next() {
-		var oldStock model.ConceptStock
-		err = rows.Scan(&oldStock.StockCode, &oldStock.StockName)
-		if err != nil {
-			return result, errors.Wrap(err, repo.Name)
-		}
-		distinctOldStocks[oldStock.StockCode] = &oldStock
-	}
-	for _, newstock := range distinctNewStocks {
-		oldstock, ok := distinctOldStocks[newstock.StockCode]
-		if !ok {
-			// insert
-			_, err = insertStockStmt.Exec(newstock.StockCode, newstock.StockName)
-			if err != nil {
-				return result, errors.Wrap(err, repo.Name)
-			}
-			result.ConceptStockInserted++
-		} else {
-			if newstock.StockName != "" && !newstock.CmpStock(oldstock) {
-				// update
-				_, err = updateStockStmt.Exec(newstock.StockName, newstock.StockCode)
-				if err != nil {
-					return result, errors.Wrap(err, repo.Name)
-				}
-				log.Println("update stock", newstock.StockCode, newstock.StockName)
-				result.ConceptStockUpdated++
-			}
-		}
-	}
-
 	insertConceptStmt, err := tx.Prepare(tmpl.InsertConcept)
 	if err != nil {
 		return result, errors.Wrap(err, repo.Name)
@@ -214,17 +148,17 @@ func (repo *StockMarketRepo) UpdateConcept(ctx context.Context, newcs ...*model.
 	if err != nil {
 		return result, errors.Wrap(err, repo.Name)
 	}
-	insertScStmt, err := tx.Prepare(tmpl.InsertConceptStockConcept)
+	insertConceptStockStmt, err := tx.Prepare(tmpl.InsertConceptStock)
 	if err != nil {
 		return result, errors.Wrap(err, repo.Name)
 	}
-	updateScStmt, err := tx.Prepare(tmpl.UpdateConceptStockConcept)
+	updateConceptStockStmt, err := tx.Prepare(tmpl.UpdateConceptStock)
 	if err != nil {
 		return result, errors.Wrap(err, repo.Name)
 	}
 
 	for _, newc := range newcs {
-		// 4. update concept_concept
+		// 2. update concept_concept
 		oldc, ok := oldcsMap[newc.Id]
 		if !ok {
 			// insert
@@ -241,47 +175,47 @@ func (repo *StockMarketRepo) UpdateConcept(ctx context.Context, newcs ...*model.
 			}
 		}
 
-		// 5. delete un-exist concept_stock_concept
+		// 3. delete un-exist concept_stock
 		codes := make([]string, len(newc.Stocks))
 		for i, stock := range newc.Stocks {
 			codes[i] = stock.StockCode
 		}
 		listSql, vals = db.ArgList(codes...)
 		vals = append(vals, newc.Id)
-		ret, err = tx.Exec(fmt.Sprintf("DELETE FROM concept_stock_concept WHERE stock_code NOT IN %s and concept_id=?", listSql), vals...)
+		ret, err = tx.Exec(fmt.Sprintf("DELETE FROM concept_stock WHERE stock_code NOT IN %s and concept_id=?", listSql), vals...)
 		if err != nil {
 			return result, errors.Wrap(err, repo.Name)
 		}
 		ra, _ = ret.RowsAffected()
-		result.ConceptStockConceptDeleted += ra
+		result.ConceptStockDeleted += ra
 
-		// 6. update concept_stock_concept
-		var oldScMap map[string]*model.ConceptStock
+		// 4. update concept_stock
+		var oldStockMap map[string]*model.ConceptStock
 		if oldc != nil {
-			oldScMap = make(map[string]*model.ConceptStock, len(oldc.Stocks))
+			oldStockMap = make(map[string]*model.ConceptStock, len(oldc.Stocks))
 			for _, oldsc := range oldc.Stocks {
-				oldScMap[oldsc.StockCode] = oldsc
+				oldStockMap[oldsc.StockCode] = oldsc
 			}
 		} else {
-			oldScMap = make(map[string]*model.ConceptStock)
+			oldStockMap = make(map[string]*model.ConceptStock)
 		}
-		for _, newsc := range newc.Stocks {
-			oldsc, ok := oldScMap[newsc.StockCode]
+		for _, newStock := range newc.Stocks {
+			oldStock, ok := oldStockMap[newStock.StockCode]
 			if !ok {
 				// insert
-				_, err = insertScStmt.Exec(newsc.StockCode, newc.Id, newsc.Description, newsc.UpdatedAt)
+				_, err = insertConceptStockStmt.Exec(newStock.Args()...)
 				if err != nil {
 					return result, errors.Wrap(err, repo.Name)
 				}
-				result.ConceptStockConceptInserted++
+				result.ConceptStockInserted++
 			} else {
-				if newsc.Description != "" && !newsc.CmpConcept(oldsc) {
+				if !newStock.Cmp(oldStock) {
 					// update
-					_, err = updateScStmt.Exec(newsc.Description, newsc.UpdatedAt, newsc.StockCode, newc.Id)
+					_, err = updateConceptStockStmt.Exec(newStock.StockName, newStock.Description, newStock.UpdatedAt, newStock.StockCode, newc.Id)
 					if err != nil {
 						return result, errors.Wrap(err, repo.Name)
 					}
-					result.ConceptStockConceptUpdated++
+					result.ConceptStockUpdated++
 				}
 			}
 		}
@@ -294,29 +228,29 @@ func (repo *StockMarketRepo) UpdateConcept(ctx context.Context, newcs ...*model.
 	return result, nil
 }
 
-func (repo *StockMarketRepo) QueryScByKw(ctx context.Context, stockKw string, conceptKw string, limit int) (
-	[]*model.ConceptStock, error) {
+func (repo *StockMarketRepo) QueryConceptStockByKw(ctx context.Context, stockKw string, conceptKw string, limit int) (
+	[]*model.ConceptStockView, error) {
 
 	switch {
 	case stockKw != "" && conceptKw != "":
-		return repo.QueryScByStockConceptKw(ctx, stockKw, conceptKw, limit)
+		return repo.QueryConceptStockByStockConceptKw(ctx, stockKw, conceptKw, limit)
 	case stockKw != "":
-		return repo.QeuryScByStockKw(ctx, stockKw, limit)
+		return repo.QeuryConceptStockByStockKw(ctx, stockKw, limit)
 	case conceptKw != "":
-		return repo.QueryScByConceptKw(ctx, conceptKw, limit)
+		return repo.QueryConceptStockByConceptKw(ctx, conceptKw, limit)
 	default:
-		return repo.QueryScByUpdatedDesc(ctx, limit)
+		return repo.QueryConceptStockByUpdatedDesc(ctx, limit)
 	}
 }
 
-func (repo *StockMarketRepo) QueryScByStockConceptKw(ctx context.Context, stockKw string, conceptKw string, limit int) (
-	[]*model.ConceptStock, error) {
+func (repo *StockMarketRepo) QueryConceptStockByStockConceptKw(ctx context.Context, stockKw string, conceptKw string, limit int) (
+	[]*model.ConceptStockView, error) {
 
 	if limit < 1 || limit > 1000 {
 		limit = 1000
 	}
-	scs := make([]*model.ConceptStock, 0)
-	scs, err := dbh.QueryContext[*model.ConceptStock](repo.DB, ctx, tmpl.SelectScByStockConceptKw,
+	scs := make([]*model.ConceptStockView, 0)
+	scs, err := dbh.QueryContext[*model.ConceptStockView](repo.DB, ctx, tmpl.SelectConceptStockViewByStockConceptKw,
 		stockKw, conceptKw, conceptKw, conceptKw, conceptKw, limit)
 	if err != nil {
 		return nil, errors.Wrap(err, repo.Name)
@@ -324,25 +258,25 @@ func (repo *StockMarketRepo) QueryScByStockConceptKw(ctx context.Context, stockK
 	return scs, nil
 }
 
-func (repo *StockMarketRepo) QeuryScByStockKw(ctx context.Context, stockKw string, limit int) ([]*model.ConceptStock, error) {
+func (repo *StockMarketRepo) QeuryConceptStockByStockKw(ctx context.Context, stockKw string, limit int) ([]*model.ConceptStockView, error) {
 	if limit < 1 || limit > 1000 {
 		limit = 1000
 	}
-	scs := make([]*model.ConceptStock, 0)
-	scs, err := dbh.QueryContext[*model.ConceptStock](repo.DB, ctx, tmpl.SelectScByStockKw,
-		stockKw, limit)
+	scs := make([]*model.ConceptStockView, 0)
+	scs, err := dbh.QueryContext[*model.ConceptStockView](repo.DB, ctx, tmpl.SelectConceptStockViewByStockKw,
+		stockKw, stockKw, limit)
 	if err != nil {
 		return nil, errors.Wrap(err, repo.Name)
 	}
 	return scs, nil
 }
 
-func (repo *StockMarketRepo) QueryScByConceptKw(ctx context.Context, conceptKw string, limit int) ([]*model.ConceptStock, error) {
+func (repo *StockMarketRepo) QueryConceptStockByConceptKw(ctx context.Context, conceptKw string, limit int) ([]*model.ConceptStockView, error) {
 	if limit < 1 || limit > 1000 {
 		limit = 1000
 	}
-	scs := make([]*model.ConceptStock, 0)
-	scs, err := dbh.QueryContext[*model.ConceptStock](repo.DB, ctx, tmpl.SelectScByConceptKw,
+	scs := make([]*model.ConceptStockView, 0)
+	scs, err := dbh.QueryContext[*model.ConceptStockView](repo.DB, ctx, tmpl.SelectConceptStockViewByConceptKw,
 		conceptKw, conceptKw, conceptKw, conceptKw, limit)
 	if err != nil {
 		return nil, errors.Wrap(err, repo.Name)
@@ -350,12 +284,12 @@ func (repo *StockMarketRepo) QueryScByConceptKw(ctx context.Context, conceptKw s
 	return scs, nil
 }
 
-func (repo *StockMarketRepo) QueryScByUpdatedDesc(ctx context.Context, limit int) ([]*model.ConceptStock, error) {
+func (repo *StockMarketRepo) QueryConceptStockByUpdatedDesc(ctx context.Context, limit int) ([]*model.ConceptStockView, error) {
 	if limit < 1 || limit > 1000 {
 		limit = 1000
 	}
-	scs := make([]*model.ConceptStock, 0)
-	scs, err := dbh.QueryContext[*model.ConceptStock](repo.DB, ctx, tmpl.SelectScByUpdateAtDesc,
+	scs := make([]*model.ConceptStockView, 0)
+	scs, err := dbh.QueryContext[*model.ConceptStockView](repo.DB, ctx, tmpl.SelectConceptStockViewByUpdateAtDesc,
 		limit)
 	if err != nil {
 		return nil, errors.Wrap(err, repo.Name)
@@ -363,7 +297,7 @@ func (repo *StockMarketRepo) QueryScByUpdatedDesc(ctx context.Context, limit int
 	return scs, nil
 }
 
-func (repo *StockMarketRepo) QueryConcepts(ctx context.Context, conceptKw string, limit int) ([]*model.Concept, error) {
+func (repo *StockMarketRepo) QueryConcepts(ctx context.Context, conceptKw string, limit int, includeStock bool) ([]*model.Concept, error) {
 	if limit < 1 || limit > 1000 {
 		limit = 1000
 	}
@@ -377,11 +311,20 @@ func (repo *StockMarketRepo) QueryConcepts(ctx context.Context, conceptKw string
 	if err != nil {
 		return nil, errors.Wrap(err, repo.Name)
 	}
+	if includeStock {
+		for _, concept := range concepts {
+			stocks, err := repo.QueryConceptStockByConceptId(ctx, concept.Id)
+			if err != nil {
+				return nil, errors.Wrap(err, repo.Name)
+			}
+			concept.Stocks = stocks
+		}
+	}
 	return concepts, nil
 }
 
-func (repo *StockMarketRepo) QueryStockByConceptId(ctx context.Context, conceptId string) ([]*model.ConceptStock, error) {
-	scs, err := dbh.QueryContext[*model.ConceptStock](repo.DB, ctx, tmpl.SelectScByConceptId,
+func (repo *StockMarketRepo) QueryConceptStockByConceptId(ctx context.Context, conceptId string) ([]*model.ConceptStock, error) {
+	scs, err := dbh.QueryContext[*model.ConceptStock](repo.DB, ctx, tmpl.SelectConceptStockByConceptId,
 		conceptId)
 	if err != nil {
 		return nil, errors.Wrap(err, repo.Name)

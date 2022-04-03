@@ -6,7 +6,7 @@ import (
 	"github.com/joexzh/dbh"
 )
 
-type ConceptStock struct {
+type ConceptStockView struct {
 	StockCode        string    `json:"stockCode" db:"stock_code"`
 	StockName        string    `json:"stockName" db:"stock_name"`
 	UpdatedAt        time.Time `json:"updatedAt" db:"updated_at"`
@@ -18,7 +18,7 @@ type ConceptStock struct {
 	ConceptUpdatedAt time.Time `json:"conceptUpdatedAt" db:"concept_updated_at"`
 }
 
-func (s *ConceptStock) Args() []any {
+func (s *ConceptStockView) Args() []any {
 	return []any{
 		&s.StockCode,
 		&s.StockName,
@@ -32,25 +32,30 @@ func (s *ConceptStock) Args() []any {
 	}
 }
 
-func (s *ConceptStock) CmpConcept(o *ConceptStock) bool {
-	return s.ConceptId == o.ConceptId &&
-		s.ConceptName == o.ConceptName &&
-		s.Description == o.Description
+type ConceptStock struct {
+	StockCode   string    `json:"stockCode"`
+	StockName   string    `json:"stockName"`
+	UpdatedAt   time.Time `json:"updated_at"`
+	Description string    `json:"description"`
+	ConceptId   string    `json:"conceptId"`
 }
 
-func (s *ConceptStock) CmpStock(o *ConceptStock) bool {
-	return s.StockCode == o.StockCode &&
-		s.StockName == o.StockName
+func (s *ConceptStock) Cmp(old *ConceptStock) bool {
+	return s.StockName == old.StockName &&
+		s.Description == old.Description
 }
 
-type ConceptStockByUpdateAtDesc []*ConceptStock
-
-func (b ConceptStockByUpdateAtDesc) Len() int { return len(b) }
-func (b ConceptStockByUpdateAtDesc) Less(i, j int) bool {
-	return b[i].UpdatedAt.After(b[j].UpdatedAt)
+func (s *ConceptStock) Args() []any {
+	return []any{&s.StockCode, &s.StockName, &s.UpdatedAt, &s.Description, &s.ConceptId}
 }
-func (b ConceptStockByUpdateAtDesc) Swap(i, j int) {
-	b[i], b[j] = b[j], b[i]
+func (s *ConceptStock) TableName() string {
+	return "concept_stock"
+}
+func (s *ConceptStock) Columns() []string {
+	return []string{"stock_code", "stock_name", "updated_at", "description", "concept_id"}
+}
+func (s *ConceptStock) Config() *dbh.Config {
+	return dbh.DefaultConfig
 }
 
 type Concept struct {
@@ -58,7 +63,7 @@ type Concept struct {
 	Name      string    `json:"name" db:"name"`
 	PlateId   int       `json:"plateId" db:"plate_id"`
 	Define    string    `json:"define" db:"define"`
-	UpdatedAt time.Time `json:"updatedAt" db:"updated_at"`
+	UpdatedAt time.Time `json:"updated_at" db:"updated_at"`
 
 	Stocks []*ConceptStock `json:"stocks"`
 }
@@ -81,14 +86,4 @@ func (c *Concept) Cmp(o *Concept) bool {
 		c.Name == o.Name &&
 		c.PlateId == o.PlateId &&
 		c.Define == o.Define
-}
-
-type ConceptByUpdateAtDesc []*Concept
-
-func (b ConceptByUpdateAtDesc) Len() int { return len(b) }
-func (b ConceptByUpdateAtDesc) Less(i, j int) bool {
-	return b[i].UpdatedAt.After(b[j].UpdatedAt)
-}
-func (b ConceptByUpdateAtDesc) Swap(i, j int) {
-	b[i], b[j] = b[j], b[i]
 }

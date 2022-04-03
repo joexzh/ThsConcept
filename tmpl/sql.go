@@ -8,69 +8,63 @@ const SelectZdt = "SELECT * FROM long_short WHERE date >= ? ORDER BY date DESC L
 
 // concept
 
-const SelectScBody = `SELECT
-s.CODE AS stock_code,
-s.NAME AS stock_name,
-sc.updated_at,
-sc.description,
+const SelectConceptStockByConceptId = "SELECT * FROM concept_stock WHERE concept_id = ? ORDER BY updated_at"
+
+const SelectConceptStockViewBody = `SELECT
+s.stock_code,
+s.stock_name,
+s.updated_at,
+s.description,
 c.id AS concept_id,
 c.NAME AS concept_name,
 c.plate_id AS concept_plate_id,
 c.define AS concept_define,
 c.updated_at AS concept_updated_at`
 
-const SelectScFrom = `
+const SelectConceptStockViewFrom = `
 FROM
 concept_stock AS s
-INNER JOIN concept_stock_concept AS sc ON sc.stock_code = s.code
-INNER JOIN concept_concept AS c ON c.id = sc.concept_id`
+INNER JOIN concept_concept AS c ON c.id = s.concept_id`
 
-const SelectAllSc = SelectScBody + SelectScFrom + ` for update`
+const SelectAllConceptStockView = SelectConceptStockViewBody + SelectConceptStockViewFrom
 
-const SelectScByConceptId = SelectScBody + SelectScFrom + " where c.id=? order by sc.updated_at desc"
-
-const SelectScByStockConceptKw = SelectScBody + SelectScFrom + `
+const SelectConceptStockViewByStockConceptKw = SelectConceptStockViewBody + SelectConceptStockViewFrom + `
 WHERE
-	MATCH ( s.CODE, s.NAME ) against ( ? ) 
+	MATCH ( s.stock_code, s.stock_name ) against ( ? ) 
 	AND (
 		MATCH ( c.NAME, c.define ) against ( ? ) 
-	OR MATCH ( sc.description ) against ( ? )) 
+	OR MATCH ( s.description ) against ( ? )) 
 ORDER BY
-	MATCH ( sc.description ) against ( ? ) DESC,
-	MATCH ( c.NAME, c.define ) against ( ? )
+	(MATCH ( s.description ) against ( ? ) + MATCH ( c.NAME, c.define ) against ( ? )) DESC
 LIMIT ?`
 
-const SelectScByStockKw = SelectScBody + SelectScFrom + `
-WHERE MATCH ( s.CODE, s.NAME ) against ( ? )
-order by sc.updated_at desc
+const SelectConceptStockViewByStockKw = SelectConceptStockViewBody + SelectConceptStockViewFrom + `
+WHERE MATCH ( s.stock_code, s.stock_name ) against ( ? )
+order by MATCH ( s.stock_code, s.stock_name ) against ( ? ) desc
 LIMIT ?`
 
-const SelectScByConceptKw = SelectScBody + SelectScFrom + `
+const SelectConceptStockViewByConceptKw = SelectConceptStockViewBody + SelectConceptStockViewFrom + `
 where 
 	MATCH ( c.NAME, c.define ) against ( ? ) 
-	OR MATCH ( sc.description ) against ( ? )
+	OR MATCH ( s.description ) against ( ? )
 	ORDER BY
-	MATCH ( sc.description ) against ( ? ) DESC,
+	MATCH ( s.description ) against ( ? ) DESC,
 	MATCH ( c.NAME, c.define ) against ( ? )
 LIMIT ?`
 
-const SelectScByUpdateAtDesc = SelectScBody + SelectScFrom + " order by sc.updated_at desc limit ?"
+const SelectConceptStockViewByUpdateAtDesc = SelectConceptStockViewBody + SelectConceptStockViewFrom + " order by s.updated_at desc limit ?"
 
 const SelectConceptByName = "select * from concept_concept where name=IFNULL(?, name) order by updated_at desc limit ?"
 
 const SelectAllConceptStock = "SELECT * FROM concept_stock"
 
-const UpdateConceptStock = "UPDATE concept_stock SET name = ? WHERE code = ?"
+const UpdateConceptStock = "UPDATE concept_stock SET stock_name=?, description=?, updated_at=? WHERE stock_code=? and concept_id=?"
 
-const InsertConceptStock = "insert INTO concept_stock VALUES (?,?)"
+const InsertConceptStock = "insert INTO concept_stock VALUES (?,?,?,?,?)"
 
 const InsertConcept = "insert INTO concept_concept VALUES (?,?,?,?,?)"
 
 const UpdateConcept = "UPDATE concept_concept SET name = ?, plate_id = ?, define = ?, updated_at = ? WHERE id = ?"
-
-const InsertConceptStockConcept = "insert INTO concept_stock_concept VALUES (?,?,?,?)"
-
-const UpdateConceptStockConcept = "UPDATE concept_stock_concept SET description = ?, updated_at = ? WHERE stock_code = ? AND concept_id = ?"
 
 // concept end
 

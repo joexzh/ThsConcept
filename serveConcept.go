@@ -22,7 +22,7 @@ func ginQuerySc(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, wrapResult(errCode(err), err.Error(), nil))
 		return
 	}
-	scs, err := repo.QueryScByKw(ctx, stock, concept, int(limit))
+	scs, err := repo.QueryConceptStockByKw(ctx, stock, concept, int(limit))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, wrapResult(errCode(err), err.Error(), nil))
 		return
@@ -41,7 +41,7 @@ func ginQueryConcept(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, wrapResult(errCode(err), err.Error(), nil))
 		return
 	}
-	concepts, err := repo.QueryConcepts(ctx, concept, int(limit))
+	concepts, err := repo.QueryConcepts(ctx, concept, int(limit), false)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, wrapResult(errCode(err), err.Error(), nil))
 		return
@@ -59,7 +59,7 @@ func ginQueryStockByConceptId(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, wrapResult(errCode(err), err.Error(), nil))
 		return
 	}
-	stocks, err := repo.QueryStockByConceptId(ctx, conceptId)
+	stocks, err := repo.QueryConceptStockByConceptId(ctx, conceptId)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, wrapResult(errCode(err), err.Error(), nil))
 		return

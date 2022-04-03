@@ -9,8 +9,8 @@ import (
 )
 
 type ConceptsDto struct {
-	Concepts []*model.Concept      `json:"concepts"`
-	Stocks   []*model.ConceptStock `json:"stocks"`
+	Concepts []*model.Concept          `json:"concepts"`
+	Stocks   []*model.ConceptStockView `json:"stocks"`
 }
 
 // ConceptListApiReturn is a mapping to ths api result
@@ -58,7 +58,6 @@ func (ret *ConceptListApiReturn) ConvertToConcept() (*model.Concept, error) {
 				StockCode:   arr[0].(string),
 				StockName:   arr[1].(string),
 				ConceptId:   ret.ConceptId,
-				ConceptName: ret.Result.Name,
 				Description: arr[8].(string),
 				UpdatedAt:   now,
 			}
