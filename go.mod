@@ -8,7 +8,7 @@ require (
 	github.com/gin-gonic/gin v1.7.7
 	github.com/go-sql-driver/mysql v1.6.0
 	github.com/google/wire v0.5.0
-	github.com/joexzh/dbh v0.0.0-20220403090846-87d35901da49
+	github.com/joexzh/dbh v0.0.0-20220403171905-d9ca4d6f9319
 	github.com/pkg/errors v0.9.1
 	golang.org/x/text v0.3.7
 )
