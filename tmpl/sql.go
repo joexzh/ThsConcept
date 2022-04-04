@@ -55,15 +55,6 @@ const InsertConcept = "insert INTO concept_concept VALUES (?,?,?,?,?)"
 
 const UpdateConcept = "UPDATE concept_concept SET name = ?, plate_id = ?, define = ?, updated_at = ? WHERE id = ?"
 
-const SelectDistinctConceptStockByKw = `SELECT DISTINCT
-stock_code,
-stock_name 
-FROM
-concept_stock 
-WHERE
-MATCH ( stock_code, stock_name ) against ( ? IN boolean MODE ) 
-AND stock_name <> ''`
-
 // concept end
 
 // realtime start

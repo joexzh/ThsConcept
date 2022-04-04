@@ -334,15 +334,6 @@ func (repo *StockMarketRepo) QueryConceptStockByConceptId(ctx context.Context, c
 	return scs, nil
 }
 
-func (repo *StockMarketRepo) QueryDistinctConceptStockByKw(ctx context.Context, stockKw string) ([]*model.ConceptStock, error) {
-	scs, err := dbh.QueryContext[*model.ConceptStock](repo.DB, ctx, tmpl.SelectDistinctConceptStockByKw,
-		stockKw)
-	if err != nil {
-		return nil, errors.Wrap(err, repo.Name)
-	}
-	return scs, nil
-}
-
 func (repo *StockMarketRepo) QueryRealtimeArchive(ctx context.Context, userId int, limit int) ([]*model.RealtimeMessage, error) {
 	if limit < 1 || limit > 1000 {
 		limit = 1000
