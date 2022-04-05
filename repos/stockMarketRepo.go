@@ -4,9 +4,11 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"sort"
 	"time"
 
 	"github.com/joexzh/dbh"
+	"golang.org/x/exp/slices"
 
 	"github.com/joexzh/ThsConcept/db"
 	"github.com/joexzh/ThsConcept/model"
@@ -70,7 +72,7 @@ func (repo *StockMarketRepo) InsertZdtList(ctx context.Context, list []*model.ZD
 	return total, nil
 }
 
-func scsToConceptMap(scs []*model.ConceptStockView) map[string]*model.Concept {
+func scsToConceptMap(scs []*model.ConceptStockFt) map[string]*model.Concept {
 	conceptMap := make(map[string]*model.Concept)
 	for _, sc := range scs {
 		concept, ok := conceptMap[sc.ConceptId]
@@ -106,6 +108,78 @@ type UpdateConceptResult struct {
 	ConceptStockDeleted    int64
 }
 
+// compare newList and oldList, inject insert, update and delete
+// Both list should be sorted.
+func injectUpdateWhenCompareList[S []E, E model.ComparableConcept[E]](newList S, oldList S,
+	insert func(E) error, update func(E) error, delete func(E) error,
+	compareSubList func(newItem, oldItem E) error) error {
+
+	for i, j := 0, 0; i < len(newList) && j < len(oldList); {
+		if j == len(oldList) {
+			for k := range newList[i:] {
+				if err := insert(newList[k]); err != nil {
+					return err
+				}
+			}
+			break
+		}
+		if i == len(newList) {
+			for k := range oldList[j:] {
+				if err := delete(oldList[k]); err != nil {
+					return err
+				}
+			}
+			break
+		}
+
+		if newList[i].GetId() == oldList[j].GetId() {
+			if !newList[i].Cmp(oldList[j]) {
+				// concept changed and add to update list
+				if err := update(newList[i]); err != nil {
+					return err
+				}
+			}
+			if compareSubList != nil {
+				if err := compareSubList(newList[i], oldList[j]); err != nil {
+					return err
+				}
+			}
+			i++
+			j++
+		} else {
+			if oldList[j].GetId() < newList[i].GetId() {
+				// cannot find new newcs, add to delete list
+				if err := delete(oldList[j]); err != nil {
+					return err
+				}
+				j++
+			} else {
+				// cannot find old concept, add to insert list
+				if err := insert(newList[i]); err != nil {
+					return err
+				}
+				i++
+			}
+		}
+	}
+	return nil
+}
+
+func SearchConceptById(id string, cs []*model.Concept) (*model.Concept, bool) {
+	i, ok := slices.BinarySearchFunc(cs, &model.Concept{Id: id}, func(a, b *model.Concept) int {
+		if a.Id < b.Id {
+			return -1
+		} else if a.Id > b.Id {
+			return 1
+		}
+		return 0
+	})
+	if !ok {
+		return nil, ok
+	}
+	return cs[i], ok
+}
+
 func (repo *StockMarketRepo) UpdateConcept(ctx context.Context, newcs ...*model.Concept) (UpdateConceptResult, error) {
 	result := UpdateConceptResult{}
 
@@ -120,105 +194,233 @@ func (repo *StockMarketRepo) UpdateConcept(ctx context.Context, newcs ...*model.
 	}
 	defer tx.Rollback()
 
-	// query old concepts and stocks from db for update
-	oldscs, err := dbh.QueryContext[*model.ConceptStockView](repo.DB, ctx, tmpl.SelectFromConceptStockView+" for update")
-	if err != nil {
-		return result, errors.Wrap(err, repo.Name)
-	}
-	oldcsMap := scsToConceptMap(oldscs)
+	// change cache
+	insertedConcepts := make([]*model.Concept, 0)
+	updatedConcepts := make([]*model.Concept, 0)
+	deletedConcepts := make([]*model.Concept, 0)
+	insertedConceptStocks := make([]*model.ConceptStock, 0)
+	updatedConceptStocks := make([]*model.ConceptStock, 0)
+	deletedConceptStocks := make([]*model.ConceptStock, 0)
 
-	// 1. delete un-exist concepts
-	cids := make([]string, 0, len(newcs))
-	for _, c := range newcs {
-		cids = append(cids, c.Id)
-	}
-	listSql, vals := db.ArgList(cids...)
-	ret, err := tx.Exec("DELETE FROM concept_concept WHERE id NOT IN "+listSql, vals...)
+	// query old concepts for update
+	oldcs, err := dbh.QueryContext[*model.Concept](tx, ctx, tmpl.SelectAllConceptOrderById+" for update")
 	if err != nil {
-		return result, errors.Wrap(err, repo.Name)
+		return result, errors.Wrap(err, repo.Name+"\n"+
+			`dbh.QueryContext[*model.Concept](tx, ctx, tmpl.SelectAllConceptOrderById+" for update")`)
 	}
-	ra, _ := ret.RowsAffected()
-	result.ConceptConceptDeleted = ra
+	sort.Sort(model.ConceptSortById(newcs))
 
-	insertConceptStmt, err := tx.Prepare(tmpl.InsertConcept)
+	appendInsertConceptList := func(concept *model.Concept) error {
+		insertedConcepts = append(insertedConcepts, concept)
+		insertedConceptStocks = append(insertedConceptStocks, concept.Stocks...)
+		return nil
+	}
+	appendUpdateConcept := func(concept *model.Concept) error {
+		updatedConcepts = append(updatedConcepts, concept)
+		return nil
+	}
+	appendDeleteConcept := func(concept *model.Concept) error {
+		deletedConcepts = append(deletedConcepts, concept)
+		deletedConceptStocks = append(deletedConceptStocks, concept.Stocks...)
+		return nil
+	}
+	conceptStockStmt, err := tx.PrepareContext(ctx, tmpl.SelectConceptStockByConceptIdOrderByCode+" for update")
 	if err != nil {
 		return result, errors.Wrap(err, repo.Name)
 	}
-	updateConceptStmt, err := tx.Prepare(tmpl.UpdateConcept)
-	if err != nil {
-		return result, errors.Wrap(err, repo.Name)
-	}
-	insertConceptStockStmt, err := tx.Prepare(tmpl.InsertConceptStock)
-	if err != nil {
-		return result, errors.Wrap(err, repo.Name)
-	}
-	updateConceptStockStmt, err := tx.Prepare(tmpl.UpdateConceptStock)
-	if err != nil {
-		return result, errors.Wrap(err, repo.Name)
-	}
-
-	for _, newc := range newcs {
-		// 2. update concept_concept
-		oldc, ok := oldcsMap[newc.Id]
-		if !ok {
-			// insert
-			_, err = insertConceptStmt.Exec(newc.Args()...)
+	err = injectUpdateWhenCompareList(newcs, oldcs, appendInsertConceptList, appendUpdateConcept, appendDeleteConcept,
+		func(newConcept, oldConcept *model.Concept) error {
+			// query stocks by conceptId from db
+			rows, err := conceptStockStmt.QueryContext(ctx, oldConcept.Id)
 			if err != nil {
-				return result, errors.Wrap(err, repo.Name)
+				return err
 			}
-			result.ConceptConceptInserted++
-		} else {
-			if newc.Define != "" && !newc.Cmp(oldc) {
-				// update
-				_, err = updateConceptStmt.Exec(newc.Name, newc.PlateId, newc.Define, newc.UpdatedAt, newc.Id)
-				result.ConceptConceptUpdated++
+			var oldStocks []*model.ConceptStock
+			err = dbh.ScanList(rows, &oldStocks)
+			rows.Close()
+			if err != nil {
+				return err
 			}
-		}
 
-		// 3. delete un-exist concept_stock
-		codes := make([]string, len(newc.Stocks))
-		for i, stock := range newc.Stocks {
-			codes[i] = stock.StockCode
-		}
-		listSql, vals = db.ArgList(codes...)
-		vals = append(vals, newc.Id)
-		ret, err = tx.Exec(fmt.Sprintf("DELETE FROM concept_stock WHERE stock_code NOT IN %s and concept_id=?", listSql), vals...)
+			sort.Sort(model.ConceptStockSortByCode(newConcept.Stocks))
+
+			// compare stocks
+			return injectUpdateWhenCompareList(newConcept.Stocks, oldStocks,
+				func(stock *model.ConceptStock) error {
+					insertedConceptStocks = append(insertedConceptStocks, stock)
+					return nil
+				},
+				func(stock *model.ConceptStock) error {
+					updatedConceptStocks = append(updatedConceptStocks, stock)
+					return nil
+				},
+				func(stock *model.ConceptStock) error {
+					deletedConceptStocks = append(deletedConceptStocks, stock)
+					return nil
+				},
+				nil)
+		},
+	)
+	if err != nil {
+		return result, errors.Wrap(err, repo.Name)
+	}
+
+	commands := make([]*model.ConceptFtCommand, 0, len(insertedConcepts)+len(updatedConcepts)+len(deletedConcepts)+
+		len(insertedConceptStocks)+len(updatedConceptStocks)+len(deletedConceptStocks))
+
+	// exec changes
+	// insert concept_concept
+	if len(insertedConcepts) > 0 {
+		r, err := dbh.BulkInsertContext(tx, ctx, 1000, insertedConcepts...)
 		if err != nil {
 			return result, errors.Wrap(err, repo.Name)
 		}
-		ra, _ = ret.RowsAffected()
-		result.ConceptStockDeleted += ra
+		result.ConceptConceptInserted += r
 
-		// 4. update concept_stock
-		var oldStockMap map[string]*model.ConceptStock
-		if oldc != nil {
-			oldStockMap = make(map[string]*model.ConceptStock, len(oldc.Stocks))
-			for _, oldsc := range oldc.Stocks {
-				oldStockMap[oldsc.StockCode] = oldsc
-			}
-		} else {
-			oldStockMap = make(map[string]*model.ConceptStock)
+		for i := range insertedConcepts {
+			commands = append(commands, &model.ConceptFtCommand{
+				Command: model.InsertConcept,
+				Obj:     model.ConceptStockFt{ConceptPlateId: i}, // just for remove compile err for i no being used
+			})
 		}
-		for _, newStock := range newc.Stocks {
-			oldStock, ok := oldStockMap[newStock.StockCode]
-			if !ok {
-				// insert
-				_, err = insertConceptStockStmt.Exec(newStock.Args()...)
-				if err != nil {
-					return result, errors.Wrap(err, repo.Name)
-				}
-				result.ConceptStockInserted++
-			} else {
-				if !newStock.Cmp(oldStock) {
-					// update
-					_, err = updateConceptStockStmt.Exec(newStock.StockName, newStock.Description, newStock.UpdatedAt, newStock.StockCode, newc.Id)
-					if err != nil {
-						return result, errors.Wrap(err, repo.Name)
-					}
-					result.ConceptStockUpdated++
-				}
-			}
+
+	}
+	// update concept_concept
+	if len(updatedConcepts) > 0 {
+		updateConceptStmt, err := tx.PrepareContext(ctx, tmpl.UpdateConcept)
+		if err != nil {
+			return result, errors.Wrap(err, repo.Name)
 		}
+		for i := range updatedConcepts {
+			ra, err := updateConceptStmt.ExecContext(ctx, updatedConcepts[i].Name, updatedConcepts[i].PlateId,
+				updatedConcepts[i].Define, updatedConcepts[i].UpdatedAt, updatedConcepts[i].Id)
+			if err != nil {
+				return result, errors.Wrap(err, repo.Name)
+			}
+			r, _ := ra.RowsAffected()
+			result.ConceptConceptUpdated += r
+
+			commands = append(commands, &model.ConceptFtCommand{
+				Command: model.UpdateConcept,
+				Obj: model.ConceptStockFt{
+					ConceptId:        insertedConcepts[i].Id,
+					ConceptName:      insertedConcepts[i].Name,
+					ConceptPlateId:   insertedConcepts[i].PlateId,
+					ConceptDefine:    insertedConcepts[i].Define,
+					ConceptUpdatedAt: insertedConcepts[i].UpdatedAt,
+				},
+			})
+		}
+	}
+	// delete concept_concept
+	if len(deletedConcepts) > 0 {
+		ids := make([]string, len(deletedConcepts))
+		for i := range deletedConcepts {
+			ids[i] = deletedConcepts[i].Id
+
+			commands = append(commands, &model.ConceptFtCommand{
+				Command: model.DeleteConcept,
+				Obj: model.ConceptStockFt{
+					ConceptId: insertedConcepts[i].Id,
+				},
+			})
+		}
+		listSql, vals := db.ArgList(ids)
+		ra, err := tx.ExecContext(ctx, fmt.Sprintf("delete from concept_concept where id in %s", listSql), vals...)
+		if err != nil {
+			return result, errors.Wrap(err, repo.Name+"\n"+
+				`tx.ExecContext(ctx, fmt.Sprintf("delete from concept_concept where id in %s", listSql), vals...)`)
+		}
+		r, _ := ra.RowsAffected()
+		result.ConceptConceptDeleted += r
+	}
+	// insert concept_stock
+	if len(insertedConceptStocks) > 0 {
+		r, err := dbh.BulkInsertContext(tx, ctx, 1000, insertedConceptStocks...)
+		if err != nil {
+			return result, errors.Wrap(err, repo.Name+"\n"+"dbh.BulkInsertContext(tx, ctx, 1000, insertedConceptStocks...)")
+		}
+		result.ConceptStockInserted += r
+
+		for i := range insertedConceptStocks {
+			concept, ok := SearchConceptById(insertedConceptStocks[i].ConceptId, newcs)
+			if ok {
+				commands = append(commands, &model.ConceptFtCommand{
+					Command: model.InsertConceptStock,
+					Obj: model.ConceptStockFt{
+						StockCode:        insertedConceptStocks[i].StockCode,
+						StockName:        insertedConceptStocks[i].StockName,
+						UpdatedAt:        insertedConceptStocks[i].UpdatedAt,
+						Description:      insertedConceptStocks[i].Description,
+						ConceptId:        concept.Id,
+						ConceptName:      concept.Name,
+						ConceptPlateId:   concept.PlateId,
+						ConceptDefine:    concept.Define,
+						ConceptUpdatedAt: concept.UpdatedAt,
+					},
+				})
+			}
+
+		}
+	}
+	// update concept_stock
+	if len(updatedConceptStocks) > 0 {
+		updateConceptStockStmt, err := tx.PrepareContext(ctx, tmpl.UpdateConceptStock)
+		if err != nil {
+			return result, errors.Wrap(err, repo.Name)
+		}
+		for i := range updatedConceptStocks {
+			ra, err := updateConceptStockStmt.ExecContext(ctx, updatedConceptStocks[i].StockName,
+				updatedConceptStocks[i].Description, updatedConceptStocks[i].UpdatedAt,
+				updatedConceptStocks[i].StockCode, updatedConceptStocks[i].ConceptId)
+			if err != nil {
+				return result, errors.Wrap(err, repo.Name+"\n"+
+					"updateConceptStockStmt.ExecContext")
+			}
+			r, _ := ra.RowsAffected()
+			result.ConceptStockUpdated += r
+
+			commands = append(commands, &model.ConceptFtCommand{
+				Command: model.UpdateConceptStock,
+				Obj: model.ConceptStockFt{
+					StockCode:   updatedConceptStocks[i].StockCode,
+					StockName:   updatedConceptStocks[i].StockName,
+					UpdatedAt:   updatedConceptStocks[i].UpdatedAt,
+					Description: updatedConceptStocks[i].Description,
+					ConceptId:   updatedConceptStocks[i].ConceptId,
+				},
+			})
+
+		}
+	}
+	// delete concept_stock
+	if len(deletedConceptStocks) > 0 {
+		deleteConceptStockStmt, err := tx.PrepareContext(ctx, tmpl.DeleteConceptStock)
+		if err != nil {
+			return result, errors.Wrap(err, repo.Name)
+		}
+		for i := range deletedConceptStocks {
+			ra, err := deleteConceptStockStmt.ExecContext(ctx, deletedConceptStocks[i].StockCode, deletedConceptStocks[i].ConceptId)
+			if err != nil {
+				return result, errors.Wrap(err, repo.Name+"\n"+
+					`deleteConceptStockStmt.ExecContext(ctx, deletedConceptStocks[i].StockCode, deletedConceptStocks[i].ConceptId)`)
+			}
+			r, _ := ra.RowsAffected()
+			result.ConceptStockDeleted += r
+
+			commands = append(commands, &model.ConceptFtCommand{
+				Command: model.DeleteConceptStock,
+				Obj: model.ConceptStockFt{
+					StockCode: deletedConceptStocks[i].StockCode,
+					ConceptId: deletedConceptStocks[i].ConceptId,
+				},
+			})
+		}
+	}
+
+	// save udpate command for sync
+	if err = repo.saveCommands(tx, ctx, commands); err != nil {
+		return result, errors.Wrap(err, repo.Name+"\n"+"saveCommands")
 	}
 
 	if err = tx.Commit(); err != nil {
@@ -228,10 +430,74 @@ func (repo *StockMarketRepo) UpdateConcept(ctx context.Context, newcs ...*model.
 	return result, nil
 }
 
+func (repo *StockMarketRepo) saveCommands(db dbh.DbInterface, ctx context.Context, commands []*model.ConceptFtCommand) error {
+	_, err := dbh.BulkInsertContext(db, ctx, 1000, commands...)
+	return err
+}
+
+func (repo *StockMarketRepo) ConceptStockFtSync(ctx context.Context) error {
+	conn, err := repo.DB.Conn(ctx)
+	if err != nil {
+		return errors.Wrap(err, repo.Name)
+	}
+	defer conn.Close()
+	tx, err := conn.BeginTx(ctx, nil)
+	if err != nil {
+		return errors.Wrap(err, repo.Name)
+	}
+	defer tx.Rollback()
+
+	cs, err := dbh.QueryContext[*model.ConceptFtCommand](tx, ctx, tmpl.SelectAllConceptStockFtSync)
+	if err != nil {
+		return errors.Wrap(err, repo.Name)
+	}
+	for i := range cs {
+		switch cs[i].Command {
+		case model.InsertConcept:
+			// do nothing
+		case model.UpdateConcept:
+			ft := &cs[i].Obj
+			_, err = tx.ExecContext(ctx, tmpl.UpdateConceptInConceptStockFt,
+				ft.ConceptName, ft.ConceptPlateId, ft.ConceptDefine, ft.ConceptUpdatedAt, ft.ConceptId)
+			if err != nil {
+				return errors.Wrap(err, repo.Name+"\n"+"tmpl.UpdateConceptInConceptStockFt")
+			}
+		case model.DeleteConcept:
+			_, err = tx.ExecContext(ctx, tmpl.DeleteConceptStockFtByConceptId, cs[i].Obj.ConceptId)
+			if err != nil {
+				return errors.Wrap(err, repo.Name+"\n"+"tmpl.DeleteConceptStockFtByConceptId")
+			}
+		case model.InsertConceptStock:
+			_, err = dbh.InsertContext(tx, ctx, &cs[i].Obj)
+			if err != nil {
+				return errors.Wrap(err, repo.Name+"\n"+"dbh.InsertContext(tx, ctx, ft)")
+			}
+		case model.UpdateConceptStock:
+			ft := &cs[i].Obj
+			_, err = tx.ExecContext(ctx, tmpl.UpdateStockInConceptStockFt, ft.StockName, ft.Description, ft.UpdatedAt,
+				ft.StockCode, ft.ConceptId)
+			if err != nil {
+				return errors.Wrap(err, repo.Name+"\n"+"tmpl.UpdateStockInConceptStockFt")
+			}
+		case model.DeleteConceptStock:
+			_, err = tx.ExecContext(ctx, tmpl.DeleteConceptStockFtByStockCodeConceptId, cs[i].Obj.StockCode, cs[i].Obj.ConceptId)
+			if err != nil {
+				return errors.Wrap(err, repo.Name+"\n"+"tmpl.DeleteConceptStockFtByStockCodeConceptId")
+			}
+		}
+
+		_, err = tx.ExecContext(ctx, tmpl.DeleteConceptStockFtSyncById, cs[i].Id)
+		if err != nil {
+			return errors.Wrap(err, repo.Name+"\n"+"tmpl.DeleteConceptStockFtSyncById")
+		}
+	}
+	return nil
+}
+
 const conceptLimit = 500
 
 func (repo *StockMarketRepo) QueryConceptStockByKw(ctx context.Context, stockKw string, conceptKw string, limit int) (
-	[]*model.ConceptStockView, error) {
+	[]*model.ConceptStockFt, error) {
 
 	switch {
 	case stockKw != "" && conceptKw != "":
@@ -246,13 +512,13 @@ func (repo *StockMarketRepo) QueryConceptStockByKw(ctx context.Context, stockKw 
 }
 
 func (repo *StockMarketRepo) QueryConceptStockByStockConceptKw(ctx context.Context, stockKw string, conceptKw string, limit int) (
-	[]*model.ConceptStockView, error) {
+	[]*model.ConceptStockFt, error) {
 
 	if limit < 1 || limit > conceptLimit {
 		limit = conceptLimit
 	}
-	scs := make([]*model.ConceptStockView, 0)
-	scs, err := dbh.QueryContext[*model.ConceptStockView](repo.DB, ctx, tmpl.SelectConceptStockViewByStockConceptKw,
+	scs := make([]*model.ConceptStockFt, 0)
+	scs, err := dbh.QueryContext[*model.ConceptStockFt](repo.DB, ctx, tmpl.SelectConceptStockFtByStockConceptKw,
 		stockKw, stockKw, conceptKw, limit)
 	if err != nil {
 		return nil, errors.Wrap(err, repo.Name)
@@ -260,12 +526,12 @@ func (repo *StockMarketRepo) QueryConceptStockByStockConceptKw(ctx context.Conte
 	return scs, nil
 }
 
-func (repo *StockMarketRepo) QeuryConceptStockByStockKw(ctx context.Context, stockKw string, limit int) ([]*model.ConceptStockView, error) {
+func (repo *StockMarketRepo) QeuryConceptStockByStockKw(ctx context.Context, stockKw string, limit int) ([]*model.ConceptStockFt, error) {
 	if limit < 1 || limit > conceptLimit {
 		limit = conceptLimit
 	}
-	scs := make([]*model.ConceptStockView, 0)
-	scs, err := dbh.QueryContext[*model.ConceptStockView](repo.DB, ctx, tmpl.SelectConceptStockViewByStockKw,
+	scs := make([]*model.ConceptStockFt, 0)
+	scs, err := dbh.QueryContext[*model.ConceptStockFt](repo.DB, ctx, tmpl.SelectConceptStockFtByStockKw,
 		stockKw, stockKw, limit)
 	if err != nil {
 		return nil, errors.Wrap(err, repo.Name)
@@ -273,12 +539,12 @@ func (repo *StockMarketRepo) QeuryConceptStockByStockKw(ctx context.Context, sto
 	return scs, nil
 }
 
-func (repo *StockMarketRepo) QueryConceptStockByConceptKw(ctx context.Context, conceptKw string, limit int) ([]*model.ConceptStockView, error) {
+func (repo *StockMarketRepo) QueryConceptStockByConceptKw(ctx context.Context, conceptKw string, limit int) ([]*model.ConceptStockFt, error) {
 	if limit < 1 || limit > conceptLimit {
 		limit = conceptLimit
 	}
-	scs := make([]*model.ConceptStockView, 0)
-	scs, err := dbh.QueryContext[*model.ConceptStockView](repo.DB, ctx, tmpl.SelectConceptStockViewByConceptKw,
+	scs := make([]*model.ConceptStockFt, 0)
+	scs, err := dbh.QueryContext[*model.ConceptStockFt](repo.DB, ctx, tmpl.SelectConceptStockFtByConceptKw,
 		conceptKw, limit)
 	if err != nil {
 		return nil, errors.Wrap(err, repo.Name)
@@ -286,12 +552,12 @@ func (repo *StockMarketRepo) QueryConceptStockByConceptKw(ctx context.Context, c
 	return scs, nil
 }
 
-func (repo *StockMarketRepo) QueryConceptStockByUpdatedDesc(ctx context.Context, limit int) ([]*model.ConceptStockView, error) {
+func (repo *StockMarketRepo) QueryConceptStockByUpdatedDesc(ctx context.Context, limit int) ([]*model.ConceptStockFt, error) {
 	if limit < 1 || limit > conceptLimit {
 		limit = conceptLimit
 	}
-	scs := make([]*model.ConceptStockView, 0)
-	scs, err := dbh.QueryContext[*model.ConceptStockView](repo.DB, ctx, tmpl.SelectConceptStockViewByUpdateAtDesc,
+	scs := make([]*model.ConceptStockFt, 0)
+	scs, err := dbh.QueryContext[*model.ConceptStockFt](repo.DB, ctx, tmpl.SelectConceptStockFtByUpdateAtDesc,
 		limit)
 	if err != nil {
 		return nil, errors.Wrap(err, repo.Name)
@@ -326,7 +592,7 @@ func (repo *StockMarketRepo) QueryConcepts(ctx context.Context, conceptKw string
 }
 
 func (repo *StockMarketRepo) QueryConceptStockByConceptId(ctx context.Context, conceptId string) ([]*model.ConceptStock, error) {
-	scs, err := dbh.QueryContext[*model.ConceptStock](repo.DB, ctx, tmpl.SelectConceptStockByConceptId,
+	scs, err := dbh.QueryContext[*model.ConceptStock](repo.DB, ctx, tmpl.SelectConceptStockByConceptIdOrderByUpdatedAt,
 		conceptId)
 	if err != nil {
 		return nil, errors.Wrap(err, repo.Name)

@@ -108,7 +108,19 @@ func retrieveConcept() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Printf("concept: update result: %+v\n", updateResult)
+	log.Println("concept: concept_concept")
+	log.Printf("concept: inserted: %d\n", updateResult.ConceptConceptInserted)
+	log.Printf("concept: updated: %d\n", updateResult.ConceptConceptInserted)
+	log.Printf("concept: deleted: %d\n", updateResult.ConceptConceptInserted)
+	log.Println("concept: concept_stock")
+	log.Printf("concept: inserted: %d\n", updateResult.ConceptStockInserted)
+	log.Printf("concept: updated: %d\n", updateResult.ConceptStockUpdated)
+	log.Printf("concept: deleted: %d\n", updateResult.ConceptStockDeleted)
+	err = repo.ConceptStockFtSync(ctx)
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Println("concept: concept_stock_ft done")
 }
 
 func retrieveSohuZdt() {

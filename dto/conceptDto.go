@@ -9,8 +9,8 @@ import (
 )
 
 type ConceptsDto struct {
-	Concepts []*model.Concept          `json:"concepts"`
-	Stocks   []*model.ConceptStockView `json:"stocks"`
+	Concepts []*model.Concept        `json:"concepts"`
+	Stocks   []*model.ConceptStockFt `json:"stocks"`
 }
 
 // ConceptListApiReturn is a mapping to ths api result
