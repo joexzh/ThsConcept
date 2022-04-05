@@ -146,20 +146,18 @@ func injectUpdateWhenCompareList[S []E, E model.ComparableConcept[E]](newList S,
 			}
 			i++
 			j++
-		} else {
-			if oldList[j].GetId() < newList[i].GetId() {
-				// cannot find new newcs, add to delete list
-				if err := delete(oldList[j]); err != nil {
-					return err
-				}
-				j++
-			} else {
-				// cannot find old concept, add to insert list
-				if err := insert(newList[i]); err != nil {
-					return err
-				}
-				i++
+		} else if oldList[j].GetId() < newList[i].GetId() {
+			// cannot find new newcs, add to delete list
+			if err := delete(oldList[j]); err != nil {
+				return err
 			}
+			j++
+		} else {
+			// cannot find old concept, add to insert list
+			if err := insert(newList[i]); err != nil {
+				return err
+			}
+			i++
 		}
 	}
 	return nil
