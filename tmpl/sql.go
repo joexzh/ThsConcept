@@ -80,7 +80,7 @@ WHERE
 	MATCH ( description, concept_name, concept_define ) against ( ? ) 
 LIMIT ?`
 
-const SelectConceptStockFtByUpdateAtDesc = SelectFromConceptStockFt + " order by updated_at desc limit ?"
+const SelectConceptStockFtOrderByUpdateAtDesc = SelectFromConceptStockFt + " order by updated_at desc limit ?"
 
 const UpdateConceptInConceptStockFt = `update concept_stock_ft set concept_name=?,concept_plate_id=?,concept_define=?,concept_updated_at=?
 where concept_id = ?`

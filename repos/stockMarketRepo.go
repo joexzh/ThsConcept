@@ -494,22 +494,22 @@ func (repo *StockMarketRepo) ConceptStockFtSync(ctx context.Context) error {
 
 const conceptLimit = 500
 
-func (repo *StockMarketRepo) QueryConceptStockByKw(ctx context.Context, stockKw string, conceptKw string, limit int) (
+func (repo *StockMarketRepo) QueryConceptFtStockByKw(ctx context.Context, stockKw string, conceptKw string, limit int) (
 	[]*model.ConceptStockFt, error) {
 
 	switch {
 	case stockKw != "" && conceptKw != "":
-		return repo.QueryConceptStockByStockConceptKw(ctx, stockKw, conceptKw, limit)
+		return repo.QueryConceptStockFtByStockConceptKw(ctx, stockKw, conceptKw, limit)
 	case stockKw != "":
-		return repo.QeuryConceptStockByStockKw(ctx, stockKw, limit)
+		return repo.QeuryConceptStockFtByStockKw(ctx, stockKw, limit)
 	case conceptKw != "":
-		return repo.QueryConceptStockByConceptKw(ctx, conceptKw, limit)
+		return repo.QueryConceptStockFtByConceptKw(ctx, conceptKw, limit)
 	default:
-		return repo.QueryConceptStockByUpdatedDesc(ctx, limit)
+		return repo.QueryConceptStockFtSortUpdatedDesc(ctx, limit)
 	}
 }
 
-func (repo *StockMarketRepo) QueryConceptStockByStockConceptKw(ctx context.Context, stockKw string, conceptKw string, limit int) (
+func (repo *StockMarketRepo) QueryConceptStockFtByStockConceptKw(ctx context.Context, stockKw string, conceptKw string, limit int) (
 	[]*model.ConceptStockFt, error) {
 
 	if limit < 1 || limit > conceptLimit {
@@ -524,7 +524,7 @@ func (repo *StockMarketRepo) QueryConceptStockByStockConceptKw(ctx context.Conte
 	return scs, nil
 }
 
-func (repo *StockMarketRepo) QeuryConceptStockByStockKw(ctx context.Context, stockKw string, limit int) ([]*model.ConceptStockFt, error) {
+func (repo *StockMarketRepo) QeuryConceptStockFtByStockKw(ctx context.Context, stockKw string, limit int) ([]*model.ConceptStockFt, error) {
 	if limit < 1 || limit > conceptLimit {
 		limit = conceptLimit
 	}
@@ -537,7 +537,7 @@ func (repo *StockMarketRepo) QeuryConceptStockByStockKw(ctx context.Context, sto
 	return scs, nil
 }
 
-func (repo *StockMarketRepo) QueryConceptStockByConceptKw(ctx context.Context, conceptKw string, limit int) ([]*model.ConceptStockFt, error) {
+func (repo *StockMarketRepo) QueryConceptStockFtByConceptKw(ctx context.Context, conceptKw string, limit int) ([]*model.ConceptStockFt, error) {
 	if limit < 1 || limit > conceptLimit {
 		limit = conceptLimit
 	}
@@ -550,12 +550,12 @@ func (repo *StockMarketRepo) QueryConceptStockByConceptKw(ctx context.Context, c
 	return scs, nil
 }
 
-func (repo *StockMarketRepo) QueryConceptStockByUpdatedDesc(ctx context.Context, limit int) ([]*model.ConceptStockFt, error) {
+func (repo *StockMarketRepo) QueryConceptStockFtSortUpdatedDesc(ctx context.Context, limit int) ([]*model.ConceptStockFt, error) {
 	if limit < 1 || limit > conceptLimit {
 		limit = conceptLimit
 	}
 	scs := make([]*model.ConceptStockFt, 0)
-	scs, err := dbh.QueryContext[*model.ConceptStockFt](repo.DB, ctx, tmpl.SelectConceptStockFtByUpdateAtDesc,
+	scs, err := dbh.QueryContext[*model.ConceptStockFt](repo.DB, ctx, tmpl.SelectConceptStockFtOrderByUpdateAtDesc,
 		limit)
 	if err != nil {
 		return nil, errors.Wrap(err, repo.Name)
