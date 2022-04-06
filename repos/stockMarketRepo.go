@@ -489,7 +489,8 @@ func (repo *StockMarketRepo) ConceptStockFtSync(ctx context.Context) error {
 			return errors.Wrap(err, repo.Name+"\n"+"tmpl.DeleteConceptStockFtSyncById")
 		}
 	}
-	return nil
+
+	return tx.Commit()
 }
 
 const conceptLimit = 500

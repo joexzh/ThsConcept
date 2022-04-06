@@ -27,6 +27,12 @@ func retrieveData() {
 
 	wg.Add(1)
 	go func(wg *sync.WaitGroup) {
+		syncConceptStockFt() // 同步 fulltext 表
+		wg.Done()
+	}(&wg)
+
+	wg.Add(1)
+	go func(wg *sync.WaitGroup) {
 		retrieveSohuZdt() // 从搜狐网获取涨跌停数据
 		wg.Done()
 	}(&wg)
@@ -116,7 +122,14 @@ func retrieveConcept() {
 	log.Printf("concept: inserted: %d\n", updateResult.ConceptStockInserted)
 	log.Printf("concept: updated: %d\n", updateResult.ConceptStockUpdated)
 	log.Printf("concept: deleted: %d\n", updateResult.ConceptStockDeleted)
-	err = repo.ConceptStockFtSync(ctx)
+}
+
+func syncConceptStockFt() {
+	repo, err := repos.InitStockMarketRepo()
+	if err != nil {
+		log.Fatal(err)
+	}
+	err = repo.ConceptStockFtSync(context.Background())
 	if err != nil {
 		log.Fatal(err)
 	}
