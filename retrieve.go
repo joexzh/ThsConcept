@@ -21,12 +21,7 @@ func retrieveData() {
 
 	wg.Add(1)
 	go func(wg *sync.WaitGroup) {
-		retrieveConcept() // 从同花顺获取概念
-		wg.Done()
-	}(&wg)
-
-	wg.Add(1)
-	go func(wg *sync.WaitGroup) {
+		retrieveConcept()    // 从同花顺获取概念
 		syncConceptStockFt() // 同步 fulltext 表
 		wg.Done()
 	}(&wg)

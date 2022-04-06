@@ -94,7 +94,7 @@ const DeleteConceptStockFtByStockCodeConceptId = "delete from concept_stock_ft w
 
 // concept_stock_ft_sync
 
-const SelectAllConceptStockFtSync = "SELECT * FROM concept_stock_ft_sync"
+const SelectAllConceptStockFtSyncOrderById = "SELECT * FROM concept_stock_ft_sync order by id"
 
 const DeleteConceptStockFtSyncById = "delete from concept_stock_ft_sync where id=?"
 

@@ -445,7 +445,7 @@ func (repo *StockMarketRepo) ConceptStockFtSync(ctx context.Context) error {
 	}
 	defer tx.Rollback()
 
-	cs, err := dbh.QueryContext[*model.ConceptFtCommand](tx, ctx, tmpl.SelectAllConceptStockFtSync)
+	cs, err := dbh.QueryContext[*model.ConceptFtCommand](tx, ctx, tmpl.SelectAllConceptStockFtSyncOrderById)
 	if err != nil {
 		return errors.Wrap(err, repo.Name)
 	}
