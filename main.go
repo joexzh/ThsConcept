@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"log"
+	_ "time/tzdata"
 )
 
 func main() {
