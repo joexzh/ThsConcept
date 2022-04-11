@@ -10,6 +10,7 @@ import (
 	"github.com/joexzh/dbh"
 	"golang.org/x/exp/slices"
 
+	"github.com/joexzh/ThsConcept/config"
 	"github.com/joexzh/ThsConcept/db"
 	"github.com/joexzh/ThsConcept/model"
 	"github.com/joexzh/ThsConcept/tmpl"
@@ -623,4 +624,145 @@ func (repo *StockMarketRepo) DeleteRealtimeArchive(ctx context.Context, userId i
 	}
 	ra, _ := ret.RowsAffected()
 	return ra, nil
+}
+
+func (repo *StockMarketRepo) filterConceptLinesToInsert(db dbh.DbInterface, ctx context.Context, plateId string,
+	newLines []*model.ConceptLine) ([]*model.ConceptLine, error) {
+	var lastDate time.Time
+	err := db.QueryRowContext(ctx, "select date from concept_line where plate_id=? order by date desc limit 1", plateId).
+		Scan(&lastDate)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return nil, err
+	}
+	sort.Sort(model.ConceptLineSortedByDate(newLines))
+	var filteredLines []*model.ConceptLine
+
+	for i := len(newLines) - 1; i >= 0; i-- {
+		if newLines[i].Date.After(lastDate) {
+			filteredLines = append(filteredLines, newLines[i])
+		}
+	}
+	return filteredLines, nil
+}
+
+func (repo *StockMarketRepo) FilterConceptLineMap(ctx context.Context, m map[string][]*model.ConceptLine) ([]*model.ConceptLine, error) {
+	if len(m) == 0 {
+		return nil, nil
+	}
+
+	conn, err := repo.DB.Conn(ctx)
+	if err != nil {
+		return nil, errors.Wrap(err, repo.Name+".FilterConceptLineMap")
+	}
+	defer conn.Close()
+
+	var lines []*model.ConceptLine
+	for k := range m {
+		l, err := repo.filterConceptLinesToInsert(conn, ctx, k, m[k])
+		if err != nil {
+			return nil, errors.Wrap(err, repo.Name+".FilterConceptLineMap")
+		}
+		lines = append(lines, l...)
+	}
+	return lines, nil
+}
+
+func (repo *StockMarketRepo) InsertConceptLines(ctx context.Context, lines []*model.ConceptLine) (int64, error) {
+	if len(lines) == 0 {
+		return 0, nil
+	}
+
+	conn, err := repo.DB.Conn(ctx)
+	if err != nil {
+		return 0, errors.Wrap(err, repo.Name+".InsertConceptLines")
+	}
+	defer conn.Close()
+	tx, err := conn.BeginTx(ctx, nil)
+	if err != nil {
+		return 0, errors.Wrap(err, repo.Name+".InsertConceptLines")
+	}
+	defer tx.Rollback()
+
+	r, err := dbh.BulkInsertContext(tx, ctx, 1000, lines...)
+	if err != nil {
+		return 0, errors.Wrap(err, repo.Name+".InsertConceptLines")
+	}
+	return r, tx.Commit()
+}
+
+func (repo *StockMarketRepo) QueryConceptLineByDate(ctx context.Context, date time.Time) ([]*model.ConceptLine, error) {
+	return dbh.QueryContext[*model.ConceptLine](repo.DB, ctx, `select * from concept_line
+where date=?`, date)
+}
+
+func (repo *StockMarketRepo) QueryAllPlateIds(ctx context.Context) ([]string, error) {
+	rows, err := repo.DB.QueryContext(ctx, "select plate_id from concept_concept")
+	if err != nil {
+		return nil, errors.Wrap(err, repo.Name+".QueryAllPlateIds")
+	}
+	defer rows.Close()
+
+	pIds := make([]string, 0)
+	for rows.Next() {
+		var pId string
+		if err = rows.Scan(&pId); err != nil {
+			return nil, errors.Wrap(err, repo.Name+".QueryAllPlateIds")
+		}
+		pIds = append(pIds, pId)
+	}
+	return pIds, nil
+}
+
+func (repo *StockMarketRepo) ViewConceptLineByDateRange(ctx context.Context, startDate time.Time, endDate time.Time) (
+	[]*model.ConceptLineDatePctChgOrderedView, error) {
+	const limit = 10
+	if endDate.Sub(startDate) >= limit*24*time.Hour {
+		switch {
+		case startDate.IsZero() && endDate.IsZero():
+			now := time.Now()
+			endDate = time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, config.ChinaLoc())
+			startDate = endDate.Add(-limit * 24 * time.Hour)
+		case startDate.IsZero():
+			startDate = endDate.Add(-limit * 24 * time.Hour)
+		case endDate.IsZero():
+			endDate = startDate.Add(limit * 24 * time.Hour)
+		default:
+			startDate = endDate.Add(-limit * 24 * time.Hour)
+		}
+	}
+
+	conn, err := repo.DB.Conn(ctx)
+	if err != nil {
+		return nil, errors.Wrap(err, repo.Name+".ViewConceptLineByDateRange")
+	}
+	defer conn.Close()
+
+	view := make([]*model.ConceptLineDatePctChgOrderedView, 0)
+
+	for startDate.Before(endDate) || startDate.Equal(endDate) {
+		lines, err := dbh.QueryContext[*model.ConceptLineWithName](conn, ctx,
+			`SELECT
+			l.*,
+			c.NAME AS concept_name 
+		FROM
+			concept_line AS l
+			INNER JOIN concept_concept AS c ON l.plate_id = c.plate_id 
+		WHERE
+			date = ? 
+		ORDER BY
+			pct_chg DESC 
+			LIMIT ?`,
+			startDate, limit*2)
+		if err != nil {
+			return nil, errors.Wrap(err, repo.Name+".ViewConceptLineByDateRange")
+		}
+		if len(lines) > 0 {
+			view = append(view, &model.ConceptLineDatePctChgOrderedView{
+				Date: startDate, Lines: lines})
+		}
+
+		startDate = startDate.Add(24 * time.Hour)
+	}
+
+	return view, nil
 }

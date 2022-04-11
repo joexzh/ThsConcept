@@ -2,10 +2,11 @@ package main
 
 import (
 	"fmt"
+	"log"
+
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/joexzh/ThsConcept/config"
-	"log"
 )
 
 func startServer() {
@@ -13,7 +14,7 @@ func startServer() {
 	r.Use(cors.Default())
 
 	r.GET("/api/stockconcept", ginQuerySc)
-	r.GET("/api/concept", ginQueryConcept)
+	r.GET("/api/stock/zdt", ginLongShort)
 	r.GET("/api/stock/:conceptid", ginQueryStockByConceptId)
 
 	r.GET("/api/realtime", ginRealtimeApi)
@@ -21,7 +22,8 @@ func startServer() {
 	r.POST("/api/realtime/archive", ginSaveRealtimeArchive)
 	r.DELETE("/api/realtime/archive/:seq", ginDeleteRealtimeArchive)
 
-	r.GET("/api/stock/zdt", ginLongShort)
+	r.GET("/api/concept/line/cmp", ginConceptLineCmp)
+	r.GET("/api/concept", ginQueryConcept)
 
 	port := config.GetEnv().ServerPort
 	if port == "" {

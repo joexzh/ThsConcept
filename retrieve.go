@@ -21,8 +21,9 @@ func retrieveData() {
 
 	wg.Add(1)
 	go func(wg *sync.WaitGroup) {
-		retrieveConcept()    // 从同花顺获取概念
-		syncConceptStockFt() // 同步 fulltext 表
+		retrieveConcept()      // 从同花顺获取概念
+		syncConceptStockFt()   // 同步 fulltext 表
+		retrieveConceptLines() // 从同花顺获取概念日k
 		wg.Done()
 	}(&wg)
 
@@ -129,6 +130,64 @@ func syncConceptStockFt() {
 		log.Fatal(err)
 	}
 	log.Println("concept: concept_stock_ft done")
+}
+
+func retrieveConceptLines() {
+	now := time.Now().In(config.ChinaLoc())
+	h, _, _ := now.Clock()
+	if h < 17 {
+		now = now.AddDate(0, 0, -1)
+	}
+	weekDay := now.Weekday()
+	for weekDay == time.Sunday || weekDay == time.Saturday {
+		now = now.AddDate(0, 0, -1)
+		weekDay = now.Weekday()
+	}
+
+	ctx := context.Background()
+	repo, err := repos.InitStockMarketRepo()
+	if err != nil {
+		log.Fatal(err)
+	}
+	pIds, err := repo.QueryAllPlateIds(ctx)
+	if err != nil {
+		log.Fatal(err)
+	}
+	t, _ := time.ParseInLocation(config.TimeLayoutDate, now.Format(config.TimeLayoutDate), config.ChinaLoc())
+	latestLinesDb, err := repo.QueryConceptLineByDate(ctx, t)
+	if err != nil {
+		log.Fatal(err)
+	}
+	exclude := make(map[string]struct{})
+	exclude["885582"] = struct{}{} // 跳过`新股发行`概念
+	for i := range latestLinesDb {
+		exclude[latestLinesDb[i].PlateId] = struct{}{}
+	}
+
+	lineMap := make(map[string][]*model.ConceptLine)
+	log.Println("concept_line: start")
+	log.Println("concept_line: exclude len", len(exclude))
+	for i := range pIds {
+		if _, ok := exclude[pIds[i]]; ok {
+			continue
+		}
+		lines, err := fetch.FetchConceptLine(ctx, pIds[i])
+		if err != nil {
+			log.Println("concept_line:", err)
+			continue // 忽略被server限制的请求, try next time
+		}
+		lineMap[pIds[i]] = lines
+		time.Sleep(time.Duration(rand.Intn(500)) * time.Millisecond)
+	}
+	lines, err := repo.FilterConceptLineMap(ctx, lineMap)
+	if err != nil {
+		log.Fatal(err)
+	}
+	r, err := repo.InsertConceptLines(ctx, lines)
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Printf("concept_line: inserted: %d\n", r)
 }
 
 func retrieveSohuZdt() {
