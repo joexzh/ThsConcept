@@ -16,8 +16,8 @@ func HttpGet(ctx context.Context, url string, headers map[string]string, query m
 		return nil, err
 	}
 	req.Header.Set("User-Agent", config.UserAgent)
-	for k, v := range headers {
-		req.Header.Set(k, headers[v])
+	for k := range headers {
+		req.Header.Set(k, headers[k])
 	}
 	req.URL.RawQuery = appendRawQuery(req.URL, query)
 	client := http.Client{}
@@ -26,8 +26,8 @@ func HttpGet(ctx context.Context, url string, headers map[string]string, query m
 
 func appendRawQuery(url *url.URL, query map[string]string) string {
 	q := url.Query()
-	for k, v := range query {
-		q.Add(k, v)
+	for k := range query {
+		q.Add(k, query[k])
 	}
 	return q.Encode()
 }

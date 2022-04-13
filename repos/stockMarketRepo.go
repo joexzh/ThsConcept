@@ -715,7 +715,7 @@ func (repo *StockMarketRepo) QueryAllPlateIds(ctx context.Context) ([]string, er
 
 func (repo *StockMarketRepo) ViewConceptLineByDateRange(ctx context.Context, startDate time.Time, endDate time.Time) (
 	[]*model.ConceptLineDatePctChgOrderedView, error) {
-	const limit = 10
+	const limit = 30
 	if endDate.Sub(startDate) >= limit*24*time.Hour {
 		switch {
 		case startDate.IsZero() && endDate.IsZero():
@@ -752,7 +752,7 @@ func (repo *StockMarketRepo) ViewConceptLineByDateRange(ctx context.Context, sta
 		ORDER BY
 			pct_chg DESC 
 			LIMIT ?`,
-			startDate, limit*2)
+			startDate, 10)
 		if err != nil {
 			return nil, errors.Wrap(err, repo.Name+".ViewConceptLineByDateRange")
 		}
