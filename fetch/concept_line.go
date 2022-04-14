@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 
 	"github.com/joexzh/ThsConcept/dto"
 	"github.com/joexzh/ThsConcept/model"
@@ -24,34 +23,32 @@ func FetchConceptLine(ctx context.Context, plateId string) ([]*model.ConceptLine
 	}
 	resp, err := util.HttpGet(ctx, fmt.Sprintf(ConceptLineUrl, plateId), headers, nil)
 	if err != nil {
-		return nil, errors.Wrap(err, "FetchConceptLine, plateId="+plateId)
+		return nil, errors.Wrap(err, "FetchConceptLine: plateId="+plateId)
 	}
 	defer resp.Body.Close()
 
 	data, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, errors.Wrap(err, "FetchConceptLine, plateId="+plateId)
+		return nil, errors.Wrap(err, "FetchConceptLine: plateId="+plateId)
 	}
 	if len(data) == 0 {
-		log.Printf("concept_line: plate_id %s return 0 byte", plateId)
-		return make([]*model.ConceptLine, 0), nil
+		return nil, fmt.Errorf("FetchConceptLine: plate_id %s return 0 byte", plateId)
 	}
 	// remove jsonp wrap
 	data = data[len(fmt.Sprintf("quotebridge_v4_line_bk_%s_01_last(", plateId)) : len(data)-1]
 	var cLine dto.ConceptLine
 	if err = json.Unmarshal(data, &cLine); err != nil {
-		return nil, errors.Wrap(err, "FetchConceptLine, plateId="+plateId)
+		return nil, errors.Wrap(err, "FetchConceptLine: plateId="+plateId)
 	}
 
 	lines, latestIncluded, err := cLine.ConverTo(plateId)
 	if err != nil {
-		return nil, errors.Wrap(err, "FetchConceptLine, plateId="+plateId)
+		return nil, errors.Wrap(err, "FetchConceptLine: plateId="+plateId)
 	}
 	if !latestIncluded {
-		log.Println("FetchConceptLine: latestIncluded=fales, plateId=" + plateId)
 		line, err := fetchConceptLineToday(ctx, plateId)
 		if err != nil {
-			return nil, errors.Wrap(err, "FetchConceptLine, plateId="+plateId)
+			return nil, errors.Wrap(err, "FetchConceptLine: plateId="+plateId)
 		}
 		lines = append(lines, line)
 	}
@@ -64,23 +61,22 @@ func fetchConceptLineToday(ctx context.Context, plateId string) (*model.ConceptL
 	}
 	resp, err := util.HttpGet(ctx, fmt.Sprintf(ConceptLineTodayUrl, plateId), headers, nil)
 	if err != nil {
-		return nil, errors.Wrap(err, "fetchConceptLineToday, plateId="+plateId)
+		return nil, errors.Wrap(err, "fetchConceptLineToday: plateId="+plateId)
 	}
 	defer resp.Body.Close()
 
 	data, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, errors.Wrap(err, "fetchConceptLineToday, plateId="+plateId)
+		return nil, errors.Wrap(err, "fetchConceptLineToday: plateId="+plateId)
 	}
 	if len(data) == 0 {
-		log.Printf("fetchConceptLineToday: plate_id %s return 0 byte", plateId)
 		return nil, errors.Wrap(err, "fetchConceptLineToday: return 0 byte, plateId="+plateId)
 	}
 	// remove jsonp wrap
 	data = data[len(fmt.Sprintf("quotebridge_v4_line_bk_%s_01_today(", plateId)) : len(data)-1]
 	dto := make(dto.ConceptLineToday)
 	if err = json.Unmarshal(data, &dto); err != nil {
-		return nil, errors.Wrap(err, "fetchConceptLineToday, plateId="+plateId)
+		return nil, errors.Wrap(err, "fetchConceptLineToday: plateId="+plateId)
 	}
 	return dto.ConverTo(plateId)
 }

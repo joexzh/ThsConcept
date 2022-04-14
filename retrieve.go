@@ -133,6 +133,7 @@ func syncConceptStockFt() {
 }
 
 func retrieveConceptLines() {
+	log.Println("concept_line: start")
 	now := time.Now().In(config.ChinaLoc())
 	h, _, _ := now.Clock()
 	if h < 17 {
@@ -144,6 +145,9 @@ func retrieveConceptLines() {
 		weekDay = now.Weekday()
 	}
 
+	dateStr := now.Format(config.TimeLayoutDate)
+	log.Println("concept_line: check date:", dateStr)
+
 	ctx := context.Background()
 	repo, err := repos.InitStockMarketRepo()
 	if err != nil {
@@ -153,7 +157,7 @@ func retrieveConceptLines() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	t, _ := time.ParseInLocation(config.TimeLayoutDate, now.Format(config.TimeLayoutDate), config.ChinaLoc())
+	t, _ := time.ParseInLocation(config.TimeLayoutDate, dateStr, config.ChinaLoc())
 	latestLinesDb, err := repo.QueryConceptLineByDate(ctx, t)
 	if err != nil {
 		log.Fatal(err)
@@ -165,8 +169,8 @@ func retrieveConceptLines() {
 	}
 
 	lineMap := make(map[string][]*model.ConceptLine)
-	log.Println("concept_line: start")
-	log.Println("concept_line: exclude len", len(exclude))
+
+	log.Printf("concept_line: exclude %d/%d", len(exclude), len(pIds))
 	for i := range pIds {
 		if _, ok := exclude[pIds[i]]; ok {
 			continue

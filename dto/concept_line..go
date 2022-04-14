@@ -3,7 +3,6 @@ package dto
 import (
 	"errors"
 	"fmt"
-	"log"
 	"strconv"
 	"strings"
 	"time"
@@ -30,19 +29,21 @@ func (c *ConceptLine) ConverTo(plateId string) ([]*model.ConceptLine, bool, erro
 	latestIncluded := true
 	days := strings.Split(c.Data, ";")
 
-	for i, s := range days {
+	for _, s := range days {
 		line, err := parseToConceptLine(plateId, strings.Split(s, ","))
 		if err != nil {
-			if i == len(days)-1 {
-				latestIncluded = false
-			}
-			log.Println("ConceptLine.ConvertTo: ", err)
 			continue
 		}
-
 		lines = append(lines, line)
 	}
 
+	today, err := time.ParseInLocation("20060102", c.Today, config.ChinaLoc())
+	if err != nil {
+		return nil, latestIncluded, fmt.Errorf("dto.ConceptLine.ConverTo, plateId=%s, today=%s, err=%s\n", plateId, c.Today, err.Error())
+	}
+	if today.After(lines[len(lines)-1].Date) {
+		latestIncluded = false
+	}
 	return lines, latestIncluded, nil
 }
 
@@ -54,7 +55,6 @@ func parseToConceptLine(plateId string, ss []string) (*model.ConceptLine, error)
 	date, err := time.ParseInLocation("20060102", ss[0], config.ChinaLoc())
 	if err != nil {
 		return nil, fmt.Errorf("dto.parseToConceptLine, plateId=%s, date=%s, err=%s\n", plateId, ss[0], err.Error())
-
 	}
 	open, err := strconv.ParseFloat(ss[1], 10)
 	if err != nil {
@@ -116,7 +116,7 @@ example:
     }
 }
 */
-type ConceptLineToday map[string]map[string]string
+type ConceptLineToday map[string]map[string]interface{}
 
 func (c ConceptLineToday) ConverTo(plateId string) (*model.ConceptLine, error) {
 	today, ok := c["bk_"+plateId]
@@ -128,43 +128,56 @@ func (c ConceptLineToday) ConverTo(plateId string) (*model.ConceptLine, error) {
 	if !ok {
 		return nil, errors.New("dto.ConceptLineToday.ConvertTo: no date")
 	}
-	ss = append(ss, date)
+	ss = append(ss, interfaceToString(date))
 
 	open, ok := today["7"]
 	if !ok {
 		return nil, errors.New("dto.ConceptLineToday.ConvertTo: no open")
 	}
-	ss = append(ss, open)
+	ss = append(ss, interfaceToString(open))
 
 	high, ok := today["8"]
 	if !ok {
 		return nil, errors.New("dto.ConceptLineToday.ConvertTo: no high")
 	}
-	ss = append(ss, high)
+	ss = append(ss, interfaceToString(high))
 
 	low, ok := today["9"]
 	if !ok {
 		return nil, errors.New("dto.ConceptLineToday.ConvertTo: no low")
 	}
-	ss = append(ss, low)
+	ss = append(ss, interfaceToString(low))
 
 	close, ok := today["11"]
 	if !ok {
 		return nil, errors.New("dto.ConceptLineToday.ConvertTo: no close")
 	}
-	ss = append(ss, close)
+	ss = append(ss, interfaceToString(close))
 
 	volume, ok := today["13"]
 	if !ok {
 		return nil, errors.New("dto.ConceptLineToday.ConvertTo: no volume")
 	}
-	ss = append(ss, volume)
+	ss = append(ss, interfaceToString(volume))
 
 	amount, ok := today["19"]
 	if !ok {
 		return nil, errors.New("dto.ConceptLineToday.ConvertTo: no amount")
 	}
-	ss = append(ss, amount)
+	ss = append(ss, interfaceToString(amount))
 
 	return parseToConceptLine(plateId, ss)
+}
+
+func interfaceToString(val interface{}) string {
+	switch v := val.(type) {
+	case string:
+		return v
+	case float64:
+		return strconv.FormatFloat(v, 'f', -1, 64)
+	case int:
+		return strconv.Itoa(v)
+	default:
+		return ""
+	}
 }
