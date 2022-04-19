@@ -115,18 +115,18 @@ func injectUpdateWhenCompareList[S []E, E model.ComparableConcept[E]](newList S,
 	insert func(E) error, update func(E) error, delete func(E) error,
 	compareSubList func(newItem, oldItem E) error) error {
 
-	for i, j := 0, 0; i < len(newList) && j < len(oldList); {
+	for i, j := 0, 0; ; {
 		if j == len(oldList) {
-			for k := range newList[i:] {
-				if err := insert(newList[k]); err != nil {
+			for ; i < len(newList); i++ {
+				if err := insert(newList[i]); err != nil {
 					return err
 				}
 			}
 			break
 		}
 		if i == len(newList) {
-			for k := range oldList[j:] {
-				if err := delete(oldList[k]); err != nil {
+			for ; j < len(oldList); j++ {
+				if err := delete(oldList[j]); err != nil {
 					return err
 				}
 			}

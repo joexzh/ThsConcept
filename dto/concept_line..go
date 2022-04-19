@@ -28,34 +28,27 @@ func (c *ConceptLine) Convert2(plateId string) ([]*model.ConceptLine, float64, b
 	lines := make([]*model.ConceptLine, 0, c.Num)
 	latestIncluded := true
 	days := strings.Split(c.Data, ";")
-	issuePrice, err := strconv.ParseFloat(c.IssuePrice, 64)
-	if err != nil {
-		if len(days) < 2 { // issuePrice is empty string, then days must > 1
-			return nil, 0, false, errors.New("dto.ConceptLine.Convert2: issue price is empty string, but days < 2")
-		}
-	}
+	issuePrice, _ := strconv.ParseFloat(c.IssuePrice, 64)
 
 	for i, s := range days {
+		if issuePrice == 0 {
+			issuePrice = -1 // in case of issuePrice is 0
+		}
+
 		line, err := parseToConceptLine(plateId, strings.Split(s, ","), issuePrice)
 		if err != nil {
 			if i < len(days)-1 {
 				return nil, 0, false, fmt.Errorf("dto.ConceptLine.Convert2: parse \"%s\" err: %v", s, err)
+			} else {
+				latestIncluded = false
 			}
 			continue
 		}
-		if (i == 0 && len(days) == 1) || (i > 0) {
+		if issuePrice > 0 {
 			lines = append(lines, line)
 		}
 
 		issuePrice = line.Close
-	}
-
-	today, err := time.ParseInLocation("20060102", c.Today, config.ChinaLoc())
-	if err != nil {
-		return nil, 0, false, fmt.Errorf("dto.ConceptLine.Convert2, plateId=%s, today=%s, err=%s\n", plateId, c.Today, err.Error())
-	}
-	if len(lines) == 0 || today.After(lines[len(lines)-1].Date) {
-		latestIncluded = false
 	}
 
 	// because last day may parse error, so we need to return latestIncluded
