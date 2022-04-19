@@ -24,30 +24,46 @@ type ConceptLine struct {
 	Today      string         `json:"today"`
 }
 
-func (c *ConceptLine) ConverTo(plateId string) ([]*model.ConceptLine, bool, error) {
+func (c *ConceptLine) Convert2(plateId string) ([]*model.ConceptLine, float64, bool, error) {
 	lines := make([]*model.ConceptLine, 0, c.Num)
 	latestIncluded := true
 	days := strings.Split(c.Data, ";")
+	issuePrice, err := strconv.ParseFloat(c.IssuePrice, 64)
+	if err != nil {
+		if len(days) < 2 { // issuePrice is empty string, then days must > 1
+			return nil, 0, false, errors.New("dto.ConceptLine.Convert2: issue price is empty string, but days < 2")
+		}
+	}
 
-	for _, s := range days {
-		line, err := parseToConceptLine(plateId, strings.Split(s, ","))
+	for i, s := range days {
+		line, err := parseToConceptLine(plateId, strings.Split(s, ","), issuePrice)
 		if err != nil {
+			if i < len(days)-1 {
+				return nil, 0, false, fmt.Errorf("dto.ConceptLine.Convert2: parse \"%s\" err: %v", s, err)
+			}
 			continue
 		}
-		lines = append(lines, line)
+		if (i == 0 && len(days) == 1) || (i > 0) {
+			lines = append(lines, line)
+		}
+
+		issuePrice = line.Close
 	}
 
 	today, err := time.ParseInLocation("20060102", c.Today, config.ChinaLoc())
 	if err != nil {
-		return nil, latestIncluded, fmt.Errorf("dto.ConceptLine.ConverTo, plateId=%s, today=%s, err=%s\n", plateId, c.Today, err.Error())
+		return nil, 0, false, fmt.Errorf("dto.ConceptLine.Convert2, plateId=%s, today=%s, err=%s\n", plateId, c.Today, err.Error())
 	}
-	if today.After(lines[len(lines)-1].Date) {
+	if len(lines) == 0 || today.After(lines[len(lines)-1].Date) {
 		latestIncluded = false
 	}
-	return lines, latestIncluded, nil
+
+	// because last day may parse error, so we need to return latestIncluded
+	// because concept line may be new and includes only one line and may parse error, so we need to return prevPrice
+	return lines, issuePrice, latestIncluded, nil
 }
 
-func parseToConceptLine(plateId string, ss []string) (*model.ConceptLine, error) {
+func parseToConceptLine(plateId string, ss []string, prevClose float64) (*model.ConceptLine, error) {
 	if len(ss) < 7 {
 		return nil, errors.New("dto.parseToConceptLine: len(ss) < 7")
 	}
@@ -68,7 +84,7 @@ func parseToConceptLine(plateId string, ss []string) (*model.ConceptLine, error)
 	if err != nil {
 		return nil, fmt.Errorf("dto.parseToConceptLine, plateId=%s, low=%s, err=%s\n", plateId, ss[3], err.Error())
 	}
-	close, err := strconv.ParseFloat(ss[4], 10)
+	klose, err := strconv.ParseFloat(ss[4], 10)
 	if err != nil {
 		return nil, fmt.Errorf("dto.parseToConceptLine, plateId=%s, close=%s, err=%s\n", plateId, ss[4], err.Error())
 	}
@@ -87,15 +103,15 @@ func parseToConceptLine(plateId string, ss []string) (*model.ConceptLine, error)
 		Open:    open,
 		High:    high,
 		Low:     low,
-		Close:   close,
-		PctChg:  (close - open) / open,
+		Close:   klose,
+		PctChg:  (klose - prevClose) / prevClose,
 		Volume:  volume,
 		Amount:  amount,
 	}, nil
 }
 
 /*
-example:
+ConceptLineToday example:
 
 {
     "bk_885978": {
@@ -118,7 +134,7 @@ example:
 */
 type ConceptLineToday map[string]map[string]interface{}
 
-func (c ConceptLineToday) ConverTo(plateId string) (*model.ConceptLine, error) {
+func (c ConceptLineToday) Convert2(plateId string, prevClose float64) (*model.ConceptLine, error) {
 	today, ok := c["bk_"+plateId]
 	if !ok {
 		return nil, errors.New("dto.ConceptLineToday.ConvertTo: no today data")
@@ -148,11 +164,11 @@ func (c ConceptLineToday) ConverTo(plateId string) (*model.ConceptLine, error) {
 	}
 	ss = append(ss, interfaceToString(low))
 
-	close, ok := today["11"]
+	klose, ok := today["11"]
 	if !ok {
 		return nil, errors.New("dto.ConceptLineToday.ConvertTo: no close")
 	}
-	ss = append(ss, interfaceToString(close))
+	ss = append(ss, interfaceToString(klose))
 
 	volume, ok := today["13"]
 	if !ok {
@@ -166,7 +182,7 @@ func (c ConceptLineToday) ConverTo(plateId string) (*model.ConceptLine, error) {
 	}
 	ss = append(ss, interfaceToString(amount))
 
-	return parseToConceptLine(plateId, ss)
+	return parseToConceptLine(plateId, ss, prevClose)
 }
 
 func interfaceToString(val interface{}) string {

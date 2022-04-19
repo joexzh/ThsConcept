@@ -175,7 +175,7 @@ func retrieveConceptLines() {
 		if _, ok := exclude[pIds[i]]; ok {
 			continue
 		}
-		lines, err := fetch.FetchConceptLine(ctx, pIds[i])
+		lines, err := fetch.ConceptLine(ctx, pIds[i])
 		if err != nil {
 			log.Println("concept_line:", err)
 			continue // 忽略被server限制的请求, try next time
