@@ -29,6 +29,10 @@ func (c *ConceptLine) Convert2(plateId string) ([]*model.ConceptLine, float64, b
 	latestIncluded := true
 	days := strings.Split(c.Data, ";")
 	issuePrice, _ := strconv.ParseFloat(c.IssuePrice, 64)
+	num := c.Num
+	if issuePrice == 0 {
+		num = c.Num - 1
+	}
 
 	for i, s := range days {
 		if issuePrice == 0 {
@@ -39,16 +43,17 @@ func (c *ConceptLine) Convert2(plateId string) ([]*model.ConceptLine, float64, b
 		if err != nil {
 			if i < len(days)-1 {
 				return nil, 0, false, fmt.Errorf("dto.ConceptLine.Convert2: parse \"%s\" err: %v", s, err)
-			} else {
-				latestIncluded = false
 			}
-			continue
+			break
 		}
 		if issuePrice > 0 {
 			lines = append(lines, line)
 		}
 
 		issuePrice = line.Close
+	}
+	if len(days) < num {
+		latestIncluded = false
 	}
 
 	// because last day may parse error, so we need to return latestIncluded
