@@ -29,9 +29,9 @@ func (c *ConceptLine) Convert2(plateId string) ([]*model.ConceptLine, float64, b
 	latestIncluded := true
 	days := strings.Split(c.Data, ";")
 	issuePrice, _ := strconv.ParseFloat(c.IssuePrice, 64)
-	num := c.Num
-	if issuePrice == 0 {
-		num = c.Num - 1
+	today, err := time.ParseInLocation("20060102", c.Today, config.ChinaLoc())
+	if err != nil {
+		return nil, 0, false, fmt.Errorf("dto.ConceptLine.Convert2: parse today \"%s\" err: %v", c.Today, err)
 	}
 
 	for i, s := range days {
@@ -52,7 +52,7 @@ func (c *ConceptLine) Convert2(plateId string) ([]*model.ConceptLine, float64, b
 
 		issuePrice = line.Close
 	}
-	if len(days) < num {
+	if lines[len(lines)-1].Date.Before(today) {
 		latestIncluded = false
 	}
 

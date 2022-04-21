@@ -180,7 +180,16 @@ func retrieveConceptLines() {
 			log.Println("concept_line:", err)
 			continue // 忽略被server限制的请求, try next time
 		}
-		lineMap[pIds[i]] = lines
+		// remove date after t
+		_lines := lines
+		for i := len(lines) - 1; i >= 0; i-- {
+			if lines[i].Date.After(t) {
+				_lines = lines[:i]
+			} else {
+				break
+			}
+		}
+		lineMap[pIds[i]] = _lines
 		time.Sleep(time.Duration(rand.Intn(500)) * time.Millisecond)
 	}
 	lines, err := repo.FilterConceptLineMap(ctx, lineMap)
