@@ -76,7 +76,7 @@ func retrieveConcept() {
 			if err != nil {
 				panic(err)
 			}
-			define, err := fetch.ConceptDefineFromPage(ctx, cid)
+			define, err := fetch.ConceptDefine(ctx, cid)
 			if err != nil {
 				panic(err)
 			}

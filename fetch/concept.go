@@ -1,9 +1,12 @@
 package fetch
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"github.com/PuerkitoBio/goquery"
 	"io"
 	"regexp"
 
@@ -57,8 +60,8 @@ func ConceptFromConceptListApi(ctx context.Context, conceptId string) (*dto.Conc
 	return &ret, nil
 }
 
-// ConceptDefineFromPage 从 html 页面 http://q.10jqka.com.cn/gn/detail/code/%v/ 获取概念定义
-func ConceptDefineFromPage(ctx context.Context, conceptId string) (string, error) {
+// ConceptDefine 从 html 页面 http://q.10jqka.com.cn/gn/detail/code/%v/ 获取概念定义
+func ConceptDefine(ctx context.Context, conceptId string) (string, error) {
 	url := fmt.Sprintf(config.ConceptDetailPageUrl, conceptId)
 	res, err := util.HttpGet(ctx, url, nil, nil)
 	if err != nil {
@@ -73,10 +76,14 @@ func ConceptDefineFromPage(ctx context.Context, conceptId string) (string, error
 	if err != nil {
 		return "", err
 	}
-	re := regexp.MustCompile(config.RexConceptDefine)
-	matches := re.FindAllStringSubmatch(string(data), -1)
-	for _, match := range matches {
-		return match[1], nil
+
+	doc, err := goquery.NewDocumentFromReader(bytes.NewReader(data))
+	if err != nil {
+		return "", err
 	}
-	return "", nil
+	p := doc.Find(".board-txt p")
+	if p.Length() != 1 {
+		return "", errors.New("ConceptDefine: exist zero or more than one <p>")
+	}
+	return p.First().Text(), nil
 }
