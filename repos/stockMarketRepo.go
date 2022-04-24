@@ -279,10 +279,15 @@ func (repo *StockMarketRepo) UpdateConcept(ctx context.Context, newcs ...*model.
 		for i := range insertedConcepts {
 			commands = append(commands, &model.ConceptFtCommand{
 				Command: model.InsertConcept,
-				Obj:     model.ConceptStockFt{ConceptPlateId: i}, // just for remove compile err for i no being used
+				Obj: model.ConceptStockFt{
+					ConceptId:        insertedConcepts[i].Id,
+					ConceptName:      insertedConcepts[i].Name,
+					ConceptPlateId:   insertedConcepts[i].PlateId,
+					ConceptDefine:    insertedConcepts[i].Define,
+					ConceptUpdatedAt: insertedConcepts[i].UpdatedAt,
+				},
 			})
 		}
-
 	}
 	// update concept_concept
 	if len(updatedConcepts) > 0 {
@@ -302,11 +307,11 @@ func (repo *StockMarketRepo) UpdateConcept(ctx context.Context, newcs ...*model.
 			commands = append(commands, &model.ConceptFtCommand{
 				Command: model.UpdateConcept,
 				Obj: model.ConceptStockFt{
-					ConceptId:        insertedConcepts[i].Id,
-					ConceptName:      insertedConcepts[i].Name,
-					ConceptPlateId:   insertedConcepts[i].PlateId,
-					ConceptDefine:    insertedConcepts[i].Define,
-					ConceptUpdatedAt: insertedConcepts[i].UpdatedAt,
+					ConceptId:        updatedConcepts[i].Id,
+					ConceptName:      updatedConcepts[i].Name,
+					ConceptPlateId:   updatedConcepts[i].PlateId,
+					ConceptDefine:    updatedConcepts[i].Define,
+					ConceptUpdatedAt: updatedConcepts[i].UpdatedAt,
 				},
 			})
 		}
@@ -320,11 +325,11 @@ func (repo *StockMarketRepo) UpdateConcept(ctx context.Context, newcs ...*model.
 			commands = append(commands, &model.ConceptFtCommand{
 				Command: model.DeleteConcept,
 				Obj: model.ConceptStockFt{
-					ConceptId: insertedConcepts[i].Id,
+					ConceptId: deletedConcepts[i].Id,
 				},
 			})
 		}
-		listSql, vals := db.ArgList(ids)
+		listSql, vals := db.ArgList(ids...)
 		ra, err := tx.ExecContext(ctx, fmt.Sprintf("delete from concept_concept where id in %s", listSql), vals...)
 		if err != nil {
 			return result, errors.Wrap(err, repo.Name+"\n"+
