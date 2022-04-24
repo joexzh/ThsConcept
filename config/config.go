@@ -8,26 +8,13 @@ import (
 )
 
 const (
-	Db               = "ThsConcept"
-	CollConcept      = "concepts"
-	CollStockConcept = "stockConcepts"
-	CollRealtime     = "realtime"
-
 	UserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.77 Safari/537.36"
 
-	RexStockSymbol = `~(?:[a-z]{2})?([0-9]+)`
-	StockSymbolUrl = "http://www.shdjt.com/js/lib/astock.js"
-
-	ConceptPageUrl       = "http://basic.10jqka.com.cn/%v/concept.html"
 	ConceptAllUrl        = "http://q.10jqka.com.cn/gn/"
 	ConceptDetailPageUrl = "http://q.10jqka.com.cn/gn/detail/code/%v/"
 	RealTimeUrl          = "https://news.10jqka.com.cn/tapp/news/push/stock/"
-
-	RexValidConceptPage = `<h1 style="margin:3px 0px 0px 0px">\s*\d{6}\s*</h1>`
-	RexConceptId        = `cid="(\d*)"`
-	RexConceptCode      = `http://q.10jqka.com.cn/gn/detail/code/(\d*)`
-	RexConceptDefine    = `<h4>[^\x00-\xff]+</h4>\s*<p style="overflow-y:auto;">([^<>]+)</p>`
-	ConceptApiUrl       = "http://basic.10jqka.com.cn/ajax/stock/conceptlist.php?cid=%v&code=601127"
+	RexConceptCode       = `http://q.10jqka.com.cn/gn/detail/code/(\d*)`
+	ConceptApiUrl        = "http://basic.10jqka.com.cn/ajax/stock/conceptlist.php?cid=%v&code=601127"
 
 	TimeLayoutDate = "2006-01-02"
 	TimeLayoutHour = "2006-01-02 15:04:05"
