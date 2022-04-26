@@ -33,32 +33,36 @@ func (c *ConceptLine) Convert2(plateId string) ([]*model.ConceptLine, float64, b
 	if err != nil {
 		return nil, 0, false, fmt.Errorf("dto.ConceptLine.Convert2: parse today \"%s\" err: %v", c.Today, err)
 	}
+	startDate, err := time.ParseInLocation("20060102", c.Start, config.ChinaLoc())
+	if err != nil {
+		return nil, 0, false, fmt.Errorf("dto.ConceptLine.Convert2: parse today \"%s\" err: %v", c.Today, err)
+	}
 
+	prevClose := issuePrice
 	for i, s := range days {
-		if issuePrice == 0 {
-			issuePrice = -1 // in case of issuePrice is 0
-		}
-
-		line, err := parseToConceptLine(plateId, strings.Split(s, ","), issuePrice)
+		line, err := parseToConceptLine(plateId, strings.Split(s, ","), prevClose)
+		prevClose = line.Close
 		if err != nil {
 			if i < len(days)-1 {
 				return nil, 0, false, fmt.Errorf("dto.ConceptLine.Convert2: parse \"%s\" err: %v", s, err)
 			}
 			break
 		}
-		if issuePrice > 0 {
+		if i == 0 {
+			if issuePrice > 0 && line.Date.Equal(startDate) {
+				lines = append(lines, line)
+			}
+		} else {
 			lines = append(lines, line)
 		}
-
-		issuePrice = line.Close
 	}
-	if lines[len(lines)-1].Date.Before(today) {
+	if len(lines) > 0 && lines[len(lines)-1].Date.Before(today) {
 		latestIncluded = false
 	}
 
 	// because last day may parse error, so we need to return latestIncluded
 	// because concept line may be new and includes only one line and may parse error, so we need to return prevPrice
-	return lines, issuePrice, latestIncluded, nil
+	return lines, prevClose, latestIncluded, nil
 }
 
 func parseToConceptLine(plateId string, ss []string, prevClose float64) (*model.ConceptLine, error) {

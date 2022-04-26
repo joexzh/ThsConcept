@@ -50,7 +50,9 @@ func ConceptLine(ctx context.Context, plateId string) ([]*model.ConceptLine, err
 		if err != nil {
 			return nil, errors.Wrap(err, "fetch.ConceptLine: plateId="+plateId)
 		}
-		lines = append(lines, line)
+		if line.Date.After(lines[len(lines)-1].Date) {
+			lines = append(lines, line)
+		}
 	}
 	return lines, err
 }
