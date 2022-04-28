@@ -41,22 +41,14 @@ func ConceptLine(ctx context.Context, plateId string) ([]*model.ConceptLine, err
 		return nil, errors.Wrap(err, "fetch.ConceptLine: plateId="+plateId)
 	}
 
-	lines, prevClose, latestIncluded, err := cLine.Convert2(plateId)
+	lines, err := cLine.Convert2(plateId)
 	if err != nil {
 		return nil, errors.Wrap(err, "fetch.ConceptLine: plateId="+plateId)
-	}
-	if !latestIncluded {
-		line, err := conceptLineToday(ctx, plateId, prevClose)
-		if err != nil {
-			return nil, errors.Wrap(err, "fetch.ConceptLine: plateId="+plateId)
-		}
-		if line.Date.After(lines[len(lines)-1].Date) {
-			lines = append(lines, line)
-		}
 	}
 	return lines, err
 }
 
+// conceptLineToday, this is reliable data for daily line, don't use this.
 func conceptLineToday(ctx context.Context, plateId string, prevClose float64) (*model.ConceptLine, error) {
 	headers := map[string]string{
 		"Referer": "http://q.10jqka.com.cn/",

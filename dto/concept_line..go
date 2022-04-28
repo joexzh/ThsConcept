@@ -3,6 +3,7 @@ package dto
 import (
 	"errors"
 	"fmt"
+	"log"
 	"strconv"
 	"strings"
 	"time"
@@ -24,30 +25,28 @@ type ConceptLine struct {
 	Today      string         `json:"today"`
 }
 
-func (c *ConceptLine) Convert2(plateId string) ([]*model.ConceptLine, float64, bool, error) {
+// Convert2 api result to model.ConceptLine
+func (c *ConceptLine) Convert2(plateId string) ([]*model.ConceptLine, error) {
 	lines := make([]*model.ConceptLine, 0, c.Num)
-	latestIncluded := true
 	days := strings.Split(c.Data, ";")
 	issuePrice, _ := strconv.ParseFloat(c.IssuePrice, 64)
-	today, err := time.ParseInLocation("20060102", c.Today, config.ChinaLoc())
-	if err != nil {
-		return nil, 0, false, fmt.Errorf("dto.ConceptLine.Convert2: parse today \"%s\" err: %v", c.Today, err)
-	}
 	startDate, err := time.ParseInLocation("20060102", c.Start, config.ChinaLoc())
 	if err != nil {
-		return nil, 0, false, fmt.Errorf("dto.ConceptLine.Convert2: parse today \"%s\" err: %v", c.Today, err)
+		return nil, fmt.Errorf("dto.ConceptLine.Convert2: parse today \"%s\" err: %v", c.Today, err)
 	}
 
 	prevClose := issuePrice
-	for i, s := range days {
-		line, err := parseToConceptLine(plateId, strings.Split(s, ","), prevClose)
-		prevClose = line.Close
+	for i := range days {
+		line, err := parseToConceptLine(plateId, strings.Split(days[i], ","), prevClose)
 		if err != nil {
 			if i < len(days)-1 {
-				return nil, 0, false, fmt.Errorf("dto.ConceptLine.Convert2: parse \"%s\" err: %v", s, err)
+				return nil, fmt.Errorf("dto.ConceptLine.Convert2: parse \"%s\" err: %v", days[i], err)
 			}
+			// if the last day is not complete yet, exclude it to the result list
+			log.Printf(`dto.ConceptLine.Convert2: the last day "%s" convert err %s`, days[i], err.Error())
 			break
 		}
+		prevClose = line.Close
 		if i == 0 {
 			if issuePrice > 0 && line.Date.Equal(startDate) {
 				lines = append(lines, line)
@@ -56,47 +55,42 @@ func (c *ConceptLine) Convert2(plateId string) ([]*model.ConceptLine, float64, b
 			lines = append(lines, line)
 		}
 	}
-	if len(lines) > 0 && lines[len(lines)-1].Date.Before(today) {
-		latestIncluded = false
-	}
 
-	// because last day may parse error, so we need to return latestIncluded
-	// because concept line may be new and includes only one line and may parse error, so we need to return prevPrice
-	return lines, prevClose, latestIncluded, nil
+	return lines, nil
 }
 
-func parseToConceptLine(plateId string, ss []string, prevClose float64) (*model.ConceptLine, error) {
-	if len(ss) < 7 {
-		return nil, errors.New("dto.parseToConceptLine: len(ss) < 7")
+func parseToConceptLine(plateId string, dailyDataArr []string, prevClose float64) (*model.ConceptLine, error) {
+	if len(dailyDataArr) < 7 {
+		return nil, errors.New("dto.parseToConceptLine: len(dailyDataArr) < 7")
 	}
 
-	date, err := time.ParseInLocation("20060102", ss[0], config.ChinaLoc())
+	date, err := time.ParseInLocation("20060102", dailyDataArr[0], config.ChinaLoc())
 	if err != nil {
-		return nil, fmt.Errorf("dto.parseToConceptLine, plateId=%s, date=%s, err=%s\n", plateId, ss[0], err.Error())
+		return nil, fmt.Errorf("dto.parseToConceptLine, plateId=%s, date=%s, err=%s\n", plateId, dailyDataArr[0], err.Error())
 	}
-	open, err := strconv.ParseFloat(ss[1], 10)
+	open, err := strconv.ParseFloat(dailyDataArr[1], 10)
 	if err != nil {
-		return nil, fmt.Errorf("dto.parseToConceptLine, plateId=%s, open=%s, err=%s\n", plateId, ss[1], err.Error())
+		return nil, fmt.Errorf("dto.parseToConceptLine, plateId=%s, open=%s, err=%s\n", plateId, dailyDataArr[1], err.Error())
 	}
-	high, err := strconv.ParseFloat(ss[2], 10)
+	high, err := strconv.ParseFloat(dailyDataArr[2], 10)
 	if err != nil {
-		return nil, fmt.Errorf("dto.parseToConceptLine, plateId=%s, high=%s, err=%s\n", plateId, ss[2], err.Error())
+		return nil, fmt.Errorf("dto.parseToConceptLine, plateId=%s, high=%s, err=%s\n", plateId, dailyDataArr[2], err.Error())
 	}
-	low, err := strconv.ParseFloat(ss[3], 10)
+	low, err := strconv.ParseFloat(dailyDataArr[3], 10)
 	if err != nil {
-		return nil, fmt.Errorf("dto.parseToConceptLine, plateId=%s, low=%s, err=%s\n", plateId, ss[3], err.Error())
+		return nil, fmt.Errorf("dto.parseToConceptLine, plateId=%s, low=%s, err=%s\n", plateId, dailyDataArr[3], err.Error())
 	}
-	klose, err := strconv.ParseFloat(ss[4], 10)
+	klose, err := strconv.ParseFloat(dailyDataArr[4], 10)
 	if err != nil {
-		return nil, fmt.Errorf("dto.parseToConceptLine, plateId=%s, close=%s, err=%s\n", plateId, ss[4], err.Error())
+		return nil, fmt.Errorf("dto.parseToConceptLine, plateId=%s, close=%s, err=%s\n", plateId, dailyDataArr[4], err.Error())
 	}
-	volume, err := strconv.Atoi(ss[5])
+	volume, err := strconv.Atoi(dailyDataArr[5])
 	if err != nil {
-		return nil, fmt.Errorf("dto.parseToConceptLine, plateId=%s, volume=%s, err=%s\n", plateId, ss[5], err.Error())
+		return nil, fmt.Errorf("dto.parseToConceptLine, plateId=%s, volume=%s, err=%s\n", plateId, dailyDataArr[5], err.Error())
 	}
-	amount, err := strconv.ParseFloat(ss[6], 10)
+	amount, err := strconv.ParseFloat(dailyDataArr[6], 10)
 	if err != nil {
-		return nil, fmt.Errorf("dto.parseToConceptLine, plateId=%s, amount=%s, err=%s\n", plateId, ss[6], err.Error())
+		return nil, fmt.Errorf("dto.parseToConceptLine, plateId=%s, amount=%s, err=%s\n", plateId, dailyDataArr[6], err.Error())
 	}
 
 	return &model.ConceptLine{
