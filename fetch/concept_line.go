@@ -17,7 +17,7 @@ const (
 	ConceptLineTodayUrl = "http://d.10jqka.com.cn/v4/line/bk_%s/01/today.js"
 )
 
-func ConceptLine(ctx context.Context, plateId string) ([]*model.ConceptLine, error) {
+func ConceptLine(ctx context.Context, plateId string) (*dto.ConceptLine, error) {
 	headers := map[string]string{
 		"Referer": "http://q.10jqka.com.cn/",
 	}
@@ -36,41 +36,37 @@ func ConceptLine(ctx context.Context, plateId string) ([]*model.ConceptLine, err
 	}
 	// remove jsonp wrap
 	data = data[len(fmt.Sprintf("quotebridge_v4_line_bk_%s_01_last(", plateId)) : len(data)-1]
-	var cLine dto.ConceptLine
-	if err = json.Unmarshal(data, &cLine); err != nil {
+	var conceptLineDto dto.ConceptLine
+	if err = json.Unmarshal(data, &conceptLineDto); err != nil {
 		return nil, errors.Wrap(err, "fetch.ConceptLine: plateId="+plateId)
 	}
 
-	lines, err := cLine.Convert2(plateId)
-	if err != nil {
-		return nil, errors.Wrap(err, "fetch.ConceptLine: plateId="+plateId)
-	}
-	return lines, err
+	return &conceptLineDto, err
 }
 
-// conceptLineToday, this is reliable data for daily line, don't use this.
-func conceptLineToday(ctx context.Context, plateId string, prevClose float64) (*model.ConceptLine, error) {
+// ConceptLineToday fetch today's conceptLine
+func ConceptLineToday(ctx context.Context, plateId string, prevClose float64) (*model.ConceptLine, error) {
 	headers := map[string]string{
 		"Referer": "http://q.10jqka.com.cn/",
 	}
 	resp, err := util.HttpGet(ctx, fmt.Sprintf(ConceptLineTodayUrl, plateId), headers, nil)
 	if err != nil {
-		return nil, err
+		return nil, errors.New("ConceptLineToday: " + err.Error())
 	}
 	defer resp.Body.Close()
 
 	data, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, err
+		return nil, errors.New("ConceptLineToday: " + err.Error())
 	}
 	if len(data) == 0 {
-		return nil, err
+		return nil, errors.New("ConceptLineToday: len(data) == 0")
 	}
 	// remove jsonp wrap
 	data = data[len(fmt.Sprintf("quotebridge_v4_line_bk_%s_01_today(", plateId)) : len(data)-1]
 	lineDto := make(dto.ConceptLineToday)
 	if err = json.Unmarshal(data, &lineDto); err != nil {
-		return nil, err
+		return nil, errors.New("ConceptLineToday: " + err.Error())
 	}
 	return lineDto.Convert2(plateId, prevClose)
 }

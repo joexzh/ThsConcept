@@ -4,7 +4,6 @@ import (
 	"log"
 	"time"
 
-	"github.com/joexzh/ThsConcept/config"
 	"github.com/joexzh/ThsConcept/model"
 )
 
@@ -22,27 +21,22 @@ type ConceptListApiReturn struct {
 }
 
 type ConceptListApiResult struct {
-	Report   string `json:"report"`
-	Name     string `json:"name"`
-	Plateid  int    `json:"plateid"`
-	Define   string
+	Report   string                     `json:"report"`
+	Name     string                     `json:"name"`
+	Plateid  int                        `json:"plateid"`
 	Listdata map[string][][]interface{} `json:"listdata"`
 }
 
 // ConvertToConcept 原始格式参考 http://rap2.taobao.org/repository/editor?id=284321&mod=459202&itf=1980737 或 概念对比.json
-func (ret *ConceptListApiReturn) ConvertToConcept() (*model.Concept, error) {
-	t, err := time.ParseInLocation(config.TimeLayoutDate, ret.Result.Report, config.ChinaLoc())
+func (ret *ConceptListApiReturn) ConvertToConcept(define string, date time.Time) (*model.Concept, error) {
 	now := time.Now()
-	if err != nil {
-		return nil, err
-	}
 
 	concept := &model.Concept{
 		Id:        ret.ConceptId,
 		Name:      ret.Result.Name,
 		PlateId:   ret.Result.Plateid,
-		Define:    ret.Result.Define,
-		UpdatedAt: t,
+		Define:    define,
+		UpdatedAt: date,
 		Stocks:    make([]*model.ConceptStock, 0),
 	}
 	if concept.Name == "" {

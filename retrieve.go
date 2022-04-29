@@ -3,8 +3,10 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/joexzh/ThsConcept/dto"
 	"log"
 	"math/rand"
+	"strconv"
 	"sync"
 	"time"
 
@@ -14,6 +16,8 @@ import (
 	"github.com/joexzh/ThsConcept/model"
 	"github.com/joexzh/ThsConcept/repos"
 )
+
+var lineDtoCache = make(map[string]*dto.ConceptLine)
 
 func retrieveData() {
 	var wg sync.WaitGroup
@@ -80,8 +84,17 @@ func retrieveConcept() {
 			if err != nil {
 				panic(err)
 			}
-			ret.Result.Define = define
-			concept, err := ret.ConvertToConcept()
+			plateId := strconv.Itoa(ret.Result.Plateid)
+			var start time.Time
+			lineDto, err := fetch.ConceptLine(ctx, plateId)
+			if err == nil {
+				lineDtoCache[plateId] = lineDto
+				start, err = time.ParseInLocation("20060102", lineDto.Start, config.ChinaLoc())
+				if err != nil {
+					panic(err)
+				}
+			}
+			concept, err := ret.ConvertToConcept(define, start)
 			if err != nil {
 				panic(err)
 			}
@@ -175,11 +188,30 @@ func retrieveConceptLines() {
 		if _, ok := exclude[pIds[i]]; ok {
 			continue
 		}
-		lines, err := fetch.ConceptLine(ctx, pIds[i])
+		var lineDto *dto.ConceptLine
+		if dtoFromCache, ok := lineDtoCache[pIds[i]]; ok {
+			lineDto = dtoFromCache
+		} else {
+			lineDto, err = fetch.ConceptLine(ctx, pIds[i])
+			if err != nil {
+				log.Println("concept_line:", err)
+				continue // 忽略被server限制的请求, try next time
+			}
+		}
+		lines, prevClose, shouldFetchLast, err := lineDto.Convert2(pIds[i])
 		if err != nil {
 			log.Println("concept_line:", err)
-			continue // 忽略被server限制的请求, try next time
+			continue
 		}
+		if shouldFetchLast {
+			todayLine, err := fetch.ConceptLineToday(ctx, pIds[i], prevClose)
+			if err != nil {
+				log.Println("concept_line:", err)
+				continue // 忽略被server限制的请求, try next time
+			}
+			lines = append(lines, todayLine)
+		}
+
 		// remove date after t
 		_lines := lines
 		for i := len(lines) - 1; i >= 0; i-- {

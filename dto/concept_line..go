@@ -25,25 +25,32 @@ type ConceptLine struct {
 	Today      string         `json:"today"`
 }
 
-// Convert2 api result to model.ConceptLine
-func (c *ConceptLine) Convert2(plateId string) ([]*model.ConceptLine, error) {
+// Convert2 api result to []*model.ConceptLine.
+// If ConceptLine.Today is after last day in ConceptLine.Data, the last day is unreliable, we should fetch it from today's api
+func (c *ConceptLine) Convert2(plateId string) ([]*model.ConceptLine, float64, bool, error) {
 	lines := make([]*model.ConceptLine, 0, c.Num)
 	days := strings.Split(c.Data, ";")
 	issuePrice, _ := strconv.ParseFloat(c.IssuePrice, 64)
 	startDate, err := time.ParseInLocation("20060102", c.Start, config.ChinaLoc())
 	if err != nil {
-		return nil, fmt.Errorf("dto.ConceptLine.Convert2: parse today \"%s\" err: %v", c.Today, err)
+		return nil, 0, false, fmt.Errorf("dto.ConceptLine.Convert2: parse start \"%s\" err: %v", c.Today, err)
 	}
 
 	prevClose := issuePrice
+	var shouldFetchToday bool
 	for i := range days {
-		line, err := parseToConceptLine(plateId, strings.Split(days[i], ","), prevClose)
+		line, valid, err := parseToConceptLine(plateId, strings.Split(days[i], ","), prevClose)
 		if err != nil {
 			if i < len(days)-1 {
-				return nil, fmt.Errorf("dto.ConceptLine.Convert2: parse \"%s\" err: %v", days[i], err)
+				return nil, 0, false, fmt.Errorf("dto.ConceptLine.Convert2: plateId %s, failed to parse ConceptLine \"%s\", %v", plateId, days[i], err)
 			}
 			// if the last day is not complete yet, exclude it to the result list
-			log.Printf(`dto.ConceptLine.Convert2: the last day "%s" convert err %s`, days[i], err.Error())
+			log.Printf(`dto.ConceptLine.Convert2: plateId %s, the last day "%s" failed to parse, %v`, plateId, days[i], err)
+			shouldFetchToday = true
+			break
+		}
+		if i == len(days)-1 && !valid {
+			shouldFetchToday = true
 			break
 		}
 		prevClose = line.Close
@@ -56,41 +63,47 @@ func (c *ConceptLine) Convert2(plateId string) ([]*model.ConceptLine, error) {
 		}
 	}
 
-	return lines, nil
+	return lines, prevClose, shouldFetchToday, nil
 }
 
-func parseToConceptLine(plateId string, dailyDataArr []string, prevClose float64) (*model.ConceptLine, error) {
+func parseToConceptLine(plateId string, dailyDataArr []string, prevClose float64) (*model.ConceptLine, bool, error) {
+	var valid bool
 	if len(dailyDataArr) < 7 {
-		return nil, errors.New("dto.parseToConceptLine: len(dailyDataArr) < 7")
+		return nil, valid, errors.New("len(dailyDataArr) < 7")
+	}
+	if len(dailyDataArr) > 7 {
+		if len(dailyDataArr) == 12 {
+			valid = true
+		}
 	}
 
 	date, err := time.ParseInLocation("20060102", dailyDataArr[0], config.ChinaLoc())
 	if err != nil {
-		return nil, fmt.Errorf("dto.parseToConceptLine, plateId=%s, date=%s, err=%s\n", plateId, dailyDataArr[0], err.Error())
+		return nil, valid, fmt.Errorf(`failed to parse date "%s", %s`, dailyDataArr[0], err.Error())
 	}
 	open, err := strconv.ParseFloat(dailyDataArr[1], 10)
 	if err != nil {
-		return nil, fmt.Errorf("dto.parseToConceptLine, plateId=%s, open=%s, err=%s\n", plateId, dailyDataArr[1], err.Error())
+		return nil, valid, fmt.Errorf(`failed to parse open "%s", %s`, dailyDataArr[1], err.Error())
 	}
 	high, err := strconv.ParseFloat(dailyDataArr[2], 10)
 	if err != nil {
-		return nil, fmt.Errorf("dto.parseToConceptLine, plateId=%s, high=%s, err=%s\n", plateId, dailyDataArr[2], err.Error())
+		return nil, valid, fmt.Errorf(`failed to parse high "%s", %s`, dailyDataArr[2], err.Error())
 	}
 	low, err := strconv.ParseFloat(dailyDataArr[3], 10)
 	if err != nil {
-		return nil, fmt.Errorf("dto.parseToConceptLine, plateId=%s, low=%s, err=%s\n", plateId, dailyDataArr[3], err.Error())
+		return nil, valid, fmt.Errorf(`failed to parse low "%s", %s`, dailyDataArr[3], err.Error())
 	}
 	klose, err := strconv.ParseFloat(dailyDataArr[4], 10)
 	if err != nil {
-		return nil, fmt.Errorf("dto.parseToConceptLine, plateId=%s, close=%s, err=%s\n", plateId, dailyDataArr[4], err.Error())
+		return nil, valid, fmt.Errorf(`failed to parse close "%s", %s`, dailyDataArr[4], err.Error())
 	}
 	volume, err := strconv.Atoi(dailyDataArr[5])
 	if err != nil {
-		return nil, fmt.Errorf("dto.parseToConceptLine, plateId=%s, volume=%s, err=%s\n", plateId, dailyDataArr[5], err.Error())
+		return nil, valid, fmt.Errorf(`failed to parse volume "%s", %s`, dailyDataArr[5], err.Error())
 	}
 	amount, err := strconv.ParseFloat(dailyDataArr[6], 10)
 	if err != nil {
-		return nil, fmt.Errorf("dto.parseToConceptLine, plateId=%s, amount=%s, err=%s\n", plateId, dailyDataArr[6], err.Error())
+		return nil, valid, fmt.Errorf(`failed to parse amount "%s", %s`, dailyDataArr[6], err.Error())
 	}
 
 	return &model.ConceptLine{
@@ -103,7 +116,7 @@ func parseToConceptLine(plateId string, dailyDataArr []string, prevClose float64
 		PctChg:  (klose - prevClose) / prevClose,
 		Volume:  volume,
 		Amount:  amount,
-	}, nil
+	}, valid, nil
 }
 
 /*
@@ -178,7 +191,8 @@ func (c ConceptLineToday) Convert2(plateId string, prevClose float64) (*model.Co
 	}
 	ss = append(ss, interfaceToString(amount))
 
-	return parseToConceptLine(plateId, ss, prevClose)
+	line, _, err := parseToConceptLine(plateId, ss, prevClose)
+	return line, err
 }
 
 func interfaceToString(val interface{}) string {

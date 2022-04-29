@@ -128,7 +128,8 @@ func (c *Concept) GetId() string {
 func (c *Concept) Cmp(o *Concept) bool {
 	return c.Name == o.Name &&
 		c.PlateId == o.PlateId &&
-		c.Define == o.Define
+		c.Define == o.Define &&
+		c.UpdatedAt == o.UpdatedAt
 }
 
 type ConceptSortById []*Concept
