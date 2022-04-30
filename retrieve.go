@@ -85,7 +85,7 @@ func retrieveConcept() {
 				panic(err)
 			}
 			plateId := strconv.Itoa(ret.Result.Plateid)
-			var start time.Time
+			start, _ := time.ParseInLocation("20060102", "20000101", config.ChinaLoc())
 			lineDto, err := fetch.ConceptLine(ctx, plateId)
 			if err == nil {
 				lineDtoCache[plateId] = lineDto
