@@ -17,7 +17,7 @@ import (
 	"github.com/joexzh/ThsConcept/repos"
 )
 
-var lineDtoCache = make(map[string]*dto.ConceptLine)
+var lineDtoCache = sync.Map{}
 
 func retrieveData() {
 	var wg sync.WaitGroup
@@ -88,7 +88,7 @@ func retrieveConcept() {
 			start, _ := time.ParseInLocation("20060102", "20000101", config.ChinaLoc())
 			lineDto, err := fetch.ConceptLine(ctx, plateId)
 			if err == nil {
-				lineDtoCache[plateId] = lineDto
+				lineDtoCache.Store(plateId, lineDto)
 				start, err = time.ParseInLocation("20060102", lineDto.Start, config.ChinaLoc())
 				if err != nil {
 					panic(err)
@@ -189,8 +189,8 @@ func retrieveConceptLines() {
 			continue
 		}
 		var lineDto *dto.ConceptLine
-		if dtoFromCache, ok := lineDtoCache[pIds[i]]; ok {
-			lineDto = dtoFromCache
+		if dtoFromCache, ok := lineDtoCache.Load(pIds[i]); ok {
+			lineDto = dtoFromCache.(*dto.ConceptLine)
 		} else {
 			lineDto, err = fetch.ConceptLine(ctx, pIds[i])
 			if err != nil {
