@@ -11,7 +11,7 @@ require (
 	github.com/joexzh/dbh v0.0.0-20220405175928-9cb12b13959e
 	github.com/pkg/errors v0.9.1
 	golang.org/x/exp v0.0.0-20220328175248-053ad81199eb
-	golang.org/x/text v0.3.8
+	golang.org/x/text v0.7.0
 )
 
 require (
@@ -29,8 +29,8 @@ require (
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/ugorji/go/codec v1.2.6 // indirect
 	golang.org/x/crypto v0.0.0-20220214200702-86341886e292 // indirect
-	golang.org/x/net v0.0.0-20211112202133-69e39bad7dc2 // indirect
-	golang.org/x/sys v0.0.0-20220722155257-8c9f86f7a55f // indirect
+	golang.org/x/net v0.7.0 // indirect
+	golang.org/x/sys v0.5.0 // indirect
 	google.golang.org/protobuf v1.27.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
